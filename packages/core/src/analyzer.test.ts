@@ -3,6 +3,8 @@ import { analyzeCodebase } from './analyzer.js';
 import { isAnalyzableFile, filterAnalyzableFiles } from './scanner.js';
 import { unusedImportsRule } from './rules/unused-imports.js';
 import { complexityHotspotRule } from './rules/complexity-hotspot.js';
+import { optionalChainingRule } from './rules/optional-chaining.js';
+import { booleanSimplificationRule } from './rules/boolean-simplification.js';
 import { buildMarkdownReport } from './report.js';
 
 describe('scanner', () => {
@@ -303,5 +305,139 @@ describe('buildMarkdownReport', () => {
     const md = buildMarkdownReport(report);
     expect(md).toContain('No issues found');
     expect(md).not.toContain('## Issues');
+  });
+});
+
+describe('optional-chaining rule', () => {
+  it('detects a && a.b guard chain', () => {
+    const code = 'const x = a && a.b;\n';
+    const files = [{ path: 'src/test.ts', content: code }];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [optionalChainingRule] },
+    });
+    expect(report.issues.length).toBe(1);
+    expect(report.issues[0].ruleId).toBe('optional-chaining');
+    expect(report.issues[0].message).toContain('a?.b');
+  });
+
+  it('detects a && a.b && a.b.c triple chain', () => {
+    const code = 'const x = a && a.b && a.b.c;\n';
+    const files = [{ path: 'src/test.ts', content: code }];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [optionalChainingRule] },
+    });
+    expect(report.issues.length).toBe(1);
+    expect(report.issues[0].message).toContain('a?.b?.c');
+  });
+
+  it('does not flag non-monotonic chains', () => {
+    const code = 'const x = a && b.c;\n';
+    const files = [{ path: 'src/test.ts', content: code }];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [optionalChainingRule] },
+    });
+    expect(report.issues.length).toBe(0);
+  });
+
+  it('does not flag chains with function calls', () => {
+    const code = 'const x = a() && a().b;\n';
+    const files = [{ path: 'src/test.ts', content: code }];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [optionalChainingRule] },
+    });
+    expect(report.issues.length).toBe(0);
+  });
+
+  it('provides proposedPatch with diff', () => {
+    const code = 'const x = user && user.name;\n';
+    const files = [{ path: 'src/test.ts', content: code }];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [optionalChainingRule] },
+    });
+    expect(report.issues.length).toBe(1);
+    expect(report.issues[0].suggestion.proposedPatch).toContain('user?.name');
+  });
+});
+
+describe('boolean-simplification rule', () => {
+  it('detects x === true', () => {
+    const code = 'const y = isValid === true;\n';
+    const files = [{ path: 'src/test.ts', content: code }];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [booleanSimplificationRule] },
+    });
+    expect(report.issues.length).toBe(1);
+    expect(report.issues[0].message).toContain('isValid');
+  });
+
+  it('detects x === false', () => {
+    const code = 'const y = isValid === false;\n';
+    const files = [{ path: 'src/test.ts', content: code }];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [booleanSimplificationRule] },
+    });
+    expect(report.issues.length).toBe(1);
+    expect(report.issues[0].message).toContain('!isValid');
+  });
+
+  it('detects !!x double negation', () => {
+    const code = 'const y = !!value;\n';
+    const files = [{ path: 'src/test.ts', content: code }];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [booleanSimplificationRule] },
+    });
+    expect(report.issues.length).toBe(1);
+    expect(report.issues[0].message).toContain('Boolean(value)');
+  });
+
+  it('detects x ? true : false ternary', () => {
+    const code = 'const y = isOk ? true : false;\n';
+    const files = [{ path: 'src/test.ts', content: code }];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [booleanSimplificationRule] },
+    });
+    expect(report.issues.length).toBe(1);
+    expect(report.issues[0].message).toContain('isOk');
+  });
+
+  it('detects x ? false : true ternary', () => {
+    const code = 'const y = isOk ? false : true;\n';
+    const files = [{ path: 'src/test.ts', content: code }];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [booleanSimplificationRule] },
+    });
+    expect(report.issues.length).toBe(1);
+    expect(report.issues[0].message).toContain('!isOk');
+  });
+
+  it('does not flag non-boolean comparisons', () => {
+    const code = 'const y = x === "hello";\n';
+    const files = [{ path: 'src/test.ts', content: code }];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [booleanSimplificationRule] },
+    });
+    expect(report.issues.length).toBe(0);
   });
 });

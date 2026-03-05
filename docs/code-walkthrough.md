@@ -129,9 +129,24 @@ Skips side-effect imports (`import './polyfill'`).
 
 Counts control-flow complexity per function: if/else, switch cases, ternaries, logical operators, loops, try/catch, plus nesting depth bonus. Flags functions scoring ≥ 12.
 
-### `src/rules/optional-chaining.ts`, `boolean-simplification.ts`, `early-return.ts`
+### `src/rules/optional-chaining.ts`
 
-Stub rules returning empty arrays. Specs defined in `docs/architecture-and-rules.md`.
+Detects monotonic `&&` guard chains and suggests optional chaining. Implementation:
+1. `flattenAndChain()` — recursively flattens left-associative `&&` binary expressions into an array of operands.
+2. `getAccessChain()` — extracts a property access chain from an expression (e.g., `a.b.c` → `['a', 'b', 'c']`). Returns null for non-simple expressions (calls, element access).
+3. `isMonotonicChain()` — verifies each operand extends the previous by exactly one segment.
+4. Only reports on the outermost `&&` chain (skips inner nodes of already-reported chains, skips nodes whose parent is also `&&`).
+
+### `src/rules/boolean-simplification.ts`
+
+Detects three redundant boolean patterns:
+1. **Comparison to boolean literals** — `x === true`, `x === false`, `x !== true`, `x !== false` (strict equality only). Also handles reversed form (`true === x`).
+2. **Double negation** — `!!x` detected as nested `PrefixUnaryExpression` with `!` operators. Suggests `Boolean(x)`.
+3. **Ternary returning boolean literals** — `x ? true : false` → `x`, `x ? false : true` → `!x`.
+
+### `src/rules/early-return.ts`
+
+Stub rule returning empty arrays. Spec defined in `docs/architecture-and-rules.md`.
 
 ### `src/rules/placeholder.ts`
 
