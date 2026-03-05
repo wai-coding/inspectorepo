@@ -8,12 +8,11 @@ Manual code review is time-consuming and inconsistent. InspectoRepo provides det
 
 ## Key Features (V1)
 
-- **Folder selection** — pick a local codebase using File System Access API (with drag-and-drop fallback)
-- **TS/TSX analysis** — scans `.ts` and `.tsx` files using [ts-morph](https://ts-morph.com/)
-- **Rule engine** — optional chaining, boolean simplification, early returns, unused imports, complexity scoring
-- **Issue explorer** — VSCode-like UI with file tree, issue list, and detail panel
-- **Diff preview** — see proposed fixes inline
-- **Markdown export** — download a clean report for sharing or archiving
+- **UI skeleton** — VSCode-like dark layout with sidebar, main panel, and detail panel (ready; folder selection coming next)
+- **TS/TSX analysis engine** — scanner and analyzer pipeline using [ts-morph](https://ts-morph.com/) (foundation in place; rule implementations coming next)
+- **Rule interface** — pluggable rule contract with a placeholder rule demonstrating the pattern
+- **Monorepo architecture** — npm workspaces with `shared`, `core`, and `web` packages
+- **CI pipeline** — GitHub Actions running lint, typecheck, build, and test on every push/PR
 
 ## Tech Stack
 
@@ -73,7 +72,7 @@ Try InspectoRepo locally in three steps:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/luiscastro193/inspectorepo.git
+   git clone https://github.com/wai-coding/inspectorepo.git
    cd inspectorepo
    ```
 
@@ -86,7 +85,7 @@ Try InspectoRepo locally in three steps:
    ```bash
    npm run dev
    ```
-   Open the URL shown in the terminal. Use the folder picker to select a local TypeScript/React project and view the analysis results.
+   Open the URL shown in the terminal. The UI skeleton is displayed; folder selection and analysis features are under active development.
 
 ## Interface Preview
 
