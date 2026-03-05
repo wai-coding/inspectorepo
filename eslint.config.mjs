@@ -26,6 +26,13 @@ export default [
         fetch: 'readonly',
         URL: 'readonly',
         HTMLElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        FileList: 'readonly',
+        File: 'readonly',
+        FileSystemDirectoryHandle: 'readonly',
+        FileSystemFileHandle: 'readonly',
+        FileSystemHandle: 'readonly',
+        localStorage: 'readonly',
       },
     },
     plugins: {
