@@ -24,13 +24,13 @@ Manual code review is time-consuming and inconsistent. InspectoRepo provides det
 |------|----------|-------------|
 | `unused-imports` | warn | Detects unused import specifiers (default, namespace, named) and suggests removal with a safe proposed patch |
 | `complexity-hotspot` | warn | Flags functions with high cyclomatic-like complexity (≥ 12) and suggests refactoring strategies |
+| `optional-chaining` | info | Detects monotonic guard chains like `a && a.b && a.b.c` and suggests optional chaining (`a?.b?.c`) |
+| `boolean-simplification` | info | Simplifies `x === true`, `x === false`, `!!x`, and `x ? true : false` patterns |
 
 ## Planned Rules (Roadmap)
 
 | Rule | Severity | Description |
 |------|----------|-------------|
-| `optional-chaining` | info | Suggest `?.` for manual null-check guard chains |
-| `boolean-simplification` | info | Simplify `x === true`, `!!x`, ternaries returning boolean literals |
 | `early-return` | info | Suggest guard clauses to reduce nesting |
 
 ## Tech Stack
@@ -126,8 +126,8 @@ Try InspectoRepo locally in three steps:
 - [x] Real analysis pipeline (scan → parse → rules → score → report)
 - [x] Rule: `unused-imports` — detect and suggest removal of unused imports
 - [x] Rule: `complexity-hotspot` — flag high-complexity functions with refactor suggestions
-- [ ] Rule: `optional-chaining` — suggest `?.` for guard chains (spec defined, stub in place)
-- [ ] Rule: `boolean-simplification` — simplify redundant boolean expressions (spec defined, stub in place)
+- [x] Rule: `optional-chaining` — suggest `?.` for guard chains
+- [x] Rule: `boolean-simplification` — simplify redundant boolean expressions
 - [ ] Rule: `early-return` — suggest guard clauses to reduce nesting (spec defined, stub in place)
 - [x] Issue list with severity filters + search
 - [x] Detail panel with proposed patches + copy

@@ -4,6 +4,43 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-05 — M4: Optional Chaining + Boolean Simplification Rules
+
+### What was implemented
+
+- **`optional-chaining` rule** — detects monotonic `&&` guard chains like `a && a.b && a.b.c` and suggests optional chaining (`a?.b?.c`). Flattens left-associative `&&` chains, extracts property access chains, verifies monotonic growth (each operand extends the previous by exactly one segment). Only reports on the outermost chain. Skips chains with function calls or non-simple expressions. Provides proposedPatch with diff.
+- **`boolean-simplification` rule** — detects three patterns:
+  1. Comparisons to boolean literals: `x === true` → `x`, `x === false` → `!x`, `x !== true` → `!x`, `x !== false` → `x`
+  2. Double negation: `!!x` → `Boolean(x)`
+  3. Ternaries returning boolean literals: `x ? true : false` → `x`, `x ? false : true` → `!x`
+  Each detection provides a proposedPatch.
+- **11 new tests** — 5 for optional-chaining (basic chain, triple chain, non-monotonic, function calls, proposedPatch), 6 for boolean-simplification (=== true, === false, !!x, ternary true/false, ternary false/true, non-boolean comparison).
+- **README** — updated "Implemented Rules" table and roadmap checklist.
+- **Code walkthrough** — documented both rule implementations.
+
+### Why
+
+M4 goal: ship two high-demo rules that show useful, conservative suggestions in the UI. These patterns are common in real TS/React codebases and demonstrate AST analysis capability.
+
+### How to verify
+
+```bash
+npm run lint        # zero errors
+npm run typecheck   # zero errors
+npm run build       # all packages build
+npm test            # 51 tests pass
+npm run dev         # open browser, analyze a TS project → see optional-chaining and boolean-simplification issues
+```
+
+### Design decisions
+
+- **Monotonic chain check** — conservative: only suggests optional chaining when each operand extends the previous by exactly one `.property`. Avoids false positives for complex expressions.
+- **No side-effect detection** — function calls in chains are rejected entirely rather than trying to determine purity.
+- **Boolean literal comparison only** — we only flag `=== true`/`=== false`, not `== true`, to avoid false positives with truthy/falsy coercion.
+- **`Boolean(x)` over `!!x`** — suggested as more explicit alternative, not mandatory.
+
+---
+
 ## 2026-03-05 — Hotfixes: Folder traversal, unused-imports patches, README, build script
 
 ### What was implemented
