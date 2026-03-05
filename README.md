@@ -17,13 +17,13 @@ Manual code review is time-consuming and inconsistent. InspectoRepo provides det
 
 ## Tech Stack
 
-| Layer    | Technology              |
-| -------- | ----------------------- |
-| Frontend | React 18 + TypeScript   |
-| Bundler  | Vite                    |
+| Layer    | Technology                |
+| -------- | ------------------------- |
+| Frontend | React 18 + TypeScript     |
+| Bundler  | Vite                      |
 | Analysis | ts-morph (TypeScript AST) |
-| Testing  | Vitest                  |
-| Monorepo | npm workspaces          |
+| Testing  | Vitest                    |
+| Monorepo | npm workspaces            |
 
 ## Project Structure
 
@@ -57,17 +57,20 @@ npm test
 
 ## Scripts
 
-| Script          | Description                        |
-| --------------- | ---------------------------------- |
-| `npm run dev`   | Start Vite dev server              |
-| `npm run build` | Build all packages + web app       |
-| `npm run lint`  | Lint all TS/TSX files              |
-| `npm run typecheck` | TypeScript type checking       |
-| `npm test`      | Run Vitest tests                   |
+| Script                | Description                  |
+| --------------------- | ---------------------------- |
+| `npm run dev`         | Start Vite dev server        |
+| `npm run build`       | Build all packages + web app |
+| `npm run lint`        | Lint all TS/TSX files        |
+| `npm run typecheck`   | TypeScript type checking     |
+| `npm run format`      | Format with Prettier         |
+| `npm run format:check`| Check formatting             |
+| `npm test`            | Run Vitest tests             |
 
 ## Roadmap
 
 ### V1 (current)
+
 - [x] Monorepo setup with npm workspaces
 - [x] Core analysis engine skeleton
 - [x] VSCode-like UI layout
@@ -77,6 +80,7 @@ npm test
 - [ ] Markdown report export
 
 ### V2 (planned)
+
 - [ ] Auto-apply suggested fixes
 - [ ] CLI package for headless analysis
 - [ ] Custom rule authoring
