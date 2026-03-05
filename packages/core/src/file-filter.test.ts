@@ -5,6 +5,7 @@ import {
   buildDirectoryTree,
   pickDefaultDirs,
   filterBySelectedDirs,
+  normalizeRelativePath,
 } from './file-filter.js';
 
 describe('isExcludedDir', () => {
@@ -126,5 +127,27 @@ describe('filterBySelectedDirs', () => {
 
   it('returns empty for no matching dirs', () => {
     expect(filterBySelectedDirs(['src/a.ts'], ['lib'])).toEqual([]);
+  });
+});
+
+describe('normalizeRelativePath', () => {
+  it('converts backslashes to forward slashes', () => {
+    expect(normalizeRelativePath('src\\components\\App.tsx')).toBe('src/components/App.tsx');
+  });
+
+  it('collapses multiple slashes', () => {
+    expect(normalizeRelativePath('src//utils///helper.ts')).toBe('src/utils/helper.ts');
+  });
+
+  it('strips leading slash', () => {
+    expect(normalizeRelativePath('/src/app.ts')).toBe('src/app.ts');
+  });
+
+  it('handles already-clean paths', () => {
+    expect(normalizeRelativePath('src/app.ts')).toBe('src/app.ts');
+  });
+
+  it('handles empty string', () => {
+    expect(normalizeRelativePath('')).toBe('');
   });
 });

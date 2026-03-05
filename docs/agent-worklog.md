@@ -4,6 +4,37 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-05 — Hotfixes: Folder traversal, unused-imports patches, README, build script
+
+### What was implemented
+
+- **HOTFIX A — Folder picker iteration robustness** — replaced unsafe `AsyncIterable<FileSystemHandle>` cast in `folder-reader.ts` with the standard `handle.entries()` API (`for await (const [name, entry] of handle.entries())`). Added early `isExcludedDir` filtering during traversal so excluded directories are never entered. Added `normalizeRelativePath()` helper in `file-filter.ts` with 5 unit tests.
+- **HOTFIX B — Unused-imports proposedPatch fix** — rewrote patch generation in `unused-imports.ts` to correctly handle default imports, namespace imports, named imports, and combinations. Default+named preserves `import Default, { named } from '...'`. Namespace-only preserves `import * as NS from '...'`. Complex combinations (default+namespace, namespace+named) fall back to text-only suggestion with no code patch. Added 4 new test cases: default+named with unused named, unused namespace, all named unused, unused default only.
+- **HOTFIX C — README alignment** — removed "drag-and-drop" claim from features. Added "Implemented Rules" table. Added "Planned Rules" table. Updated Demo steps to match actual UI buttons (Select Folder / Upload Folder / Analyze / Export .md).
+- **HOTFIX D — Build script polish** — replaced `npm -ws` with `npm --ws` in root build script.
+- **HOTFIX E — Docs updates** — this entry + code-walkthrough updates for folder traversal and unused-imports changes.
+
+### Why
+
+These hotfixes harden the codebase before adding new features (M4). The folder traversal was fragile across browsers, the unused-imports rule generated invalid patches for non-named imports, the README overstated features, and the build script used a deprecated short flag.
+
+### How to verify
+
+```bash
+npm run lint        # zero errors
+npm run typecheck   # zero errors
+npm run build       # all packages build
+npm test            # all tests pass (including new unused-imports & normalizeRelativePath tests)
+```
+
+### Design decisions
+
+- **`handle.entries()` over `handle.values()`** — entries provides both name and handle, avoiding extra `getDirectoryHandle`/`getFileHandle` calls.
+- **Early exclusion during traversal** — calling `isExcludedDir(name)` before recursing avoids reading entire `node_modules` trees.
+- **Omitting proposedPatch for complex imports** — safer than generating incorrect patches; the text suggestion still explains what to do.
+
+---
+
 ## 2026-03-05 — M3: Core Analysis Pipeline + Report UI
 
 ### What was implemented

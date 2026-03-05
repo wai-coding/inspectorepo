@@ -16,6 +16,7 @@ export {
   filterExcludedPaths,
   pickDefaultDirs,
   filterBySelectedDirs,
+  normalizeRelativePath,
 } from './file-filter.js';
 export type { DirEntry, FileEntry } from './file-filter.js';
 export { computeScore } from './scoring.js';

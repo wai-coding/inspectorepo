@@ -64,3 +64,14 @@ export function filterBySelectedDirs(filePaths: string[], selectedDirs: string[]
     return dirSet.has(topDir);
   });
 }
+
+/**
+ * Normalize a relative path: collapse backslashes, strip leading slashes,
+ * remove redundant segments. Safe for browser-constructed paths.
+ */
+export function normalizeRelativePath(raw: string): string {
+  return raw
+    .replace(/\\/g, '/')
+    .replace(/\/+/g, '/')
+    .replace(/^\//, '');
+}

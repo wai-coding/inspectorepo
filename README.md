@@ -8,17 +8,30 @@ Manual code review is time-consuming and inconsistent. InspectoRepo provides det
 
 ## Key Features (V1)
 
-- **Folder selection** — pick a local codebase using File System Access API (Chrome/Edge) with a drag-and-drop upload fallback
+- **Folder selection** — pick a local codebase using File System Access API (Chrome/Edge) with a fallback `<input webkitdirectory>` upload
 - **Directory tree** — browse top-level directories with checkboxes; defaults to `src/` if present
 - **TS/TSX analysis engine** — deterministic pipeline: scan → parse (ts-morph in-memory) → apply rules → score → report
-- **Implemented rules** — `unused-imports` (warns on unreferenced imports with proposed fix) and `complexity-hotspot` (flags functions above complexity threshold)
-- **Rules in progress** — `optional-chaining`, `boolean-simplification`, `early-return` (stubs defined, specs in `docs/architecture-and-rules.md`)
 - **Issue list UI** — filterable by severity/search, with detail panel showing suggestions and proposed patches
 - **Scoring** — 0–100 score based on issue severity counts
 - **Markdown export** — download a full analysis report as `.md`
 - **Exclude rules** — automatically skips `node_modules`, `dist`, `build`, `.git`, hidden dirs, and other noise
 - **Monorepo architecture** — npm workspaces with `shared`, `core`, and `web` packages
 - **CI pipeline** — GitHub Actions running lint, typecheck, build, and test on every push/PR
+
+## Implemented Rules
+
+| Rule | Severity | Description |
+|------|----------|-------------|
+| `unused-imports` | warn | Detects unused import specifiers (default, namespace, named) and suggests removal with a safe proposed patch |
+| `complexity-hotspot` | warn | Flags functions with high cyclomatic-like complexity (≥ 12) and suggests refactoring strategies |
+
+## Planned Rules (Roadmap)
+
+| Rule | Severity | Description |
+|------|----------|-------------|
+| `optional-chaining` | info | Suggest `?.` for manual null-check guard chains |
+| `boolean-simplification` | info | Simplify `x === true`, `!!x`, ternaries returning boolean literals |
+| `early-return` | info | Suggest guard clauses to reduce nesting |
 
 ## Tech Stack
 
@@ -87,11 +100,11 @@ Try InspectoRepo locally in three steps:
    npm install
    ```
 
-3. **Run the development server and select a folder to analyze**
+3. **Run the development server and analyze a folder**
    ```bash
    npm run dev
    ```
-   Open the URL shown in the terminal. Click **Select Folder** (Chrome/Edge) or **Upload Folder** (any browser) to load a TypeScript project. Use the sidebar checkboxes to pick directories, then click **Analyze**.
+   Open the URL shown in the terminal. Click **Select Folder** (Chrome/Edge) or **Upload Folder** (any browser) to load a TypeScript project. Use the sidebar checkboxes to pick directories, then click **Analyze**. View issues in the main panel, click any issue to see details and proposed fixes, and click **Export .md** to download a Markdown report.
 
    > **Browser support:** The folder picker uses the File System Access API (Chrome/Edge). Other browsers can use the Upload Folder fallback.
 
@@ -113,9 +126,9 @@ Try InspectoRepo locally in three steps:
 - [x] Real analysis pipeline (scan → parse → rules → score → report)
 - [x] Rule: `unused-imports` — detect and suggest removal of unused imports
 - [x] Rule: `complexity-hotspot` — flag high-complexity functions with refactor suggestions
-- [ ] Rule: `optional-chaining` (spec defined, stub in place)
-- [ ] Rule: `boolean-simplification` (spec defined, stub in place)
-- [ ] Rule: `early-return` (spec defined, stub in place)
+- [ ] Rule: `optional-chaining` — suggest `?.` for guard chains (spec defined, stub in place)
+- [ ] Rule: `boolean-simplification` — simplify redundant boolean expressions (spec defined, stub in place)
+- [ ] Rule: `early-return` — suggest guard clauses to reduce nesting (spec defined, stub in place)
 - [x] Issue list with severity filters + search
 - [x] Detail panel with proposed patches + copy
 - [x] Markdown report export
