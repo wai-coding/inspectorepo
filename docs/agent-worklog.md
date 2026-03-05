@@ -43,6 +43,41 @@ npm test           # Run Vitest
 
 ---
 
+## 2026-03-05 — Project Infrastructure Improvements
+
+### What was implemented
+
+- **PR Automation** — Added a "Pull Request Automation" section to `ai/prompt-master.md` that documents the standard workflow for creating and merging PRs via GitHub CLI (`gh pr create`, `gh pr merge`) with safe fallbacks for missing CLI, auth issues, and branch protection.
+- **MIT License** — Added `LICENSE` file (MIT, copyright 2026 Luis Castro).
+- **README improvements** — Added a "Demo" section with three-step quickstart, and an "Interface Preview" section with a screenshot placeholder.
+- **Screenshots directory** — Created `screenshots/` with a `README.md` placeholder explaining screenshots will be added as features are implemented.
+- **CI workflow** — Added `.github/workflows/ci.yml` that runs on push/PR: checkout, setup Node 20, install, lint, typecheck, build, test.
+- **Documentation updates** — Updated `docs/agent-worklog.md` and `docs/code-walkthrough.md` to cover all new files.
+
+### Why
+
+Project infrastructure to support professional development workflows: automated CI ensures checks pass on every push/PR, the license clarifies usage rights, the README improvements make the repo approachable for recruiters and contributors, and PR automation streamlines the agent development loop.
+
+### How to verify
+
+```bash
+npm run lint        # zero errors
+npm run typecheck   # zero errors
+npm run build       # all packages build
+npm test            # all tests pass
+```
+
+CI will also run automatically on push and PRs via GitHub Actions.
+
+### Design decisions
+
+- **GitHub Actions** over other CI — native to GitHub, zero config beyond the YAML file
+- **`npm ci`** in CI — deterministic installs from lockfile
+- **Node 20** — matches the project's `engines` requirement
+- **`--delete-branch=false`** in PR merge — keeps `dev` alive for ongoing work
+
+---
+
 ## 2026-03-05 — M1: Stable Scripts & Formatting
 
 ### What was implemented

@@ -22,6 +22,39 @@ Required checks before commit:
 
 If any check fails, fix it before committing.
 
+## Pull Request Automation
+
+After every successful milestone or feature implementation:
+
+1. `git add -A`
+2. `git commit` (using Conventional Commits)
+3. `git push origin dev`
+
+Then automatically create a Pull Request from `dev` → `main` using GitHub CLI:
+
+```bash
+gh pr create --base main --head dev --title "<commit title>" --body "<summary of changes and checks passed>"
+```
+
+Then merge the PR:
+
+```bash
+gh pr merge --merge --delete-branch=false
+```
+
+After merging, ensure `dev` stays synced with `main`:
+
+```bash
+git checkout dev
+git pull origin main
+```
+
+### Safe Fallbacks
+
+- **If `gh` is not installed** → log manual instructions in `docs/agent-worklog.md` and provide install link (`https://cli.github.com/`)
+- **If `gh` is not authenticated** → instruct to run `gh auth login` and document in worklog
+- **If branch protection prevents merge** → document the issue in `docs/agent-worklog.md` and stop after PR creation (do not force merge)
+
 ## Human Code Style
 
 Write code that looks human:

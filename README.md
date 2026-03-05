@@ -67,6 +67,33 @@ npm test
 | `npm run format:check`| Check formatting             |
 | `npm test`            | Run Vitest tests             |
 
+## Demo
+
+Try InspectoRepo locally in three steps:
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/luiscastro193/inspectorepo.git
+   cd inspectorepo
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Run the development server and select a folder to analyze**
+   ```bash
+   npm run dev
+   ```
+   Open the URL shown in the terminal. Use the folder picker to select a local TypeScript/React project and view the analysis results.
+
+## Interface Preview
+
+![InspectoRepo UI](./screenshots/ui-layout.png)
+
+> The screenshot above will show the VSCode-like dark interface with the file tree sidebar, issues list in the main panel, and detail/diff view on the right.
+
 ## Roadmap
 
 ### V1 (current)
