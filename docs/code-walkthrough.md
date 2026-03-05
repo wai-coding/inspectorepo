@@ -34,7 +34,9 @@ MIT License (copyright 2026 Luis Castro). Grants permission to use, copy, modify
 
 ## `.github/workflows/ci.yml`
 
-GitHub Actions CI pipeline. Runs on every push to `main`/`dev` and on pull requests to `main`. Steps: checkout, setup Node 20 with npm cache, `npm ci`, lint, typecheck, build, test.
+GitHub Actions CI pipeline. Runs on every push to `main`/`dev` and on all pull requests. Steps: checkout, setup Node 20 with npm cache, `npm install`, lint, typecheck, build, test.
+
+Uses `npm install` (not `npm ci`) because the repo does not commit a lockfile.
 
 ---
 
@@ -48,7 +50,7 @@ Placeholder directory for UI screenshots. Will be populated as features are impl
 
 ## `ai/prompt-master.md` — PR Automation Section
 
-Documents the automated PR workflow: after each milestone, the agent commits, pushes, creates a PR via `gh pr create`, merges via `gh pr merge`, and syncs `dev` with `main`. Includes fallbacks for missing `gh` CLI, authentication issues, and branch protection.
+Documents the automated PR workflow: after each milestone, the agent commits, pushes, creates a PR via `gh pr create`, merges via `gh pr merge`, and resets `dev` to `origin/main` using `git reset --hard` + `git push --force-with-lease`. Includes fallbacks for missing `gh` CLI, authentication issues, and branch protection.
 
 ---
 

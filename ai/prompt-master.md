@@ -42,12 +42,18 @@ Then merge the PR:
 gh pr merge --merge --delete-branch=false
 ```
 
-After merging, ensure `dev` stays synced with `main`:
+After merging, reset `dev` to match `main` exactly (avoids merge commits and drift):
 
 ```bash
+git fetch origin
 git checkout dev
-git pull origin main
+git reset --hard origin/main
+git push --force-with-lease origin dev
 ```
+
+> **Why `reset --hard` + `force-with-lease`?**  
+> `git pull origin main` can create unexpected merge commits when `dev` has diverged.  
+> A hard reset makes `dev` an exact copy of `main`, and `--force-with-lease` prevents overwriting work that another collaborator may have pushed in the meantime.
 
 ### Safe Fallbacks
 

@@ -98,3 +98,39 @@ npm run build       # all packages + web build successfully
 npm test            # 7 tests pass
 npm run format:check # all files formatted
 ```
+
+---
+
+## 2026-03-05 — Fix Build Script, CI, & Repo Polish
+
+### What was implemented
+
+- **Root build script fix** — replaced `npm run build --workspaces --if-present` (recursive invocation) with `npm -ws run build --if-present` which correctly delegates to each workspace.
+- **CI workflow update** — switched `npm ci` to `npm install` (no lockfile in repo yet) and broadened `pull_request` trigger to all branches.
+- **README corrections** — fixed clone URL to `wai-coding/inspectorepo`. Adjusted feature list to reflect current implementation status: UI skeleton is ready, folder selection and rule implementations are coming next.
+- **PR automation improvement** — replaced `git pull origin main` sync step with `git fetch origin && git reset --hard origin/main && git push --force-with-lease origin dev`. This avoids unexpected merge commits and keeps `dev` an exact copy of `main` after merge.
+
+### Why
+
+- The recursive build script caused `npm run build` at root to fail or loop.
+- Honest README feature descriptions prevent confusion for recruiters and contributors.
+- The safer `reset --hard` + `force-with-lease` pattern prevents drift between `dev` and `main`.
+
+### How to verify
+
+```bash
+npm run lint        # zero errors
+npm run typecheck   # zero errors
+npm run build       # builds shared → core → web successfully
+npm test            # all tests pass
+```
+
+### PR Status
+
+`gh` CLI is installed but not authenticated. To create and merge the PR manually:
+
+1. Authenticate: `gh auth login`
+2. Create PR: `gh pr create --base main --head dev --title "fix: correct build script, add CI, and polish repo automation" --body "Fix build script, CI, README, PR automation, and docs"`
+3. Merge PR: `gh pr merge --merge --delete-branch=false`
+
+Or create the PR via the GitHub web UI at: https://github.com/wai-coding/inspectorepo/compare/main...dev
