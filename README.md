@@ -8,8 +8,10 @@ Manual code review is time-consuming and inconsistent. InspectoRepo provides det
 
 ## Key Features (V1)
 
-- **UI skeleton** — VSCode-like dark layout with sidebar, main panel, and detail panel (ready; folder selection coming next)
-- **TS/TSX analysis engine** — scanner and analyzer pipeline using [ts-morph](https://ts-morph.com/) (foundation in place; rule implementations coming next)
+- **Folder selection** — pick a local codebase using File System Access API (Chrome/Edge) with a drag-and-drop upload fallback
+- **Directory tree** — browse top-level directories with checkboxes; defaults to `src/` if present
+- **TS/TSX analysis engine** — scanner, file-filter, and analyzer pipeline using [ts-morph](https://ts-morph.com/) (foundation in place; rule implementations coming next)
+- **Exclude rules** — automatically skips `node_modules`, `dist`, `build`, `.git`, hidden dirs, and other noise
 - **Rule interface** — pluggable rule contract with a placeholder rule demonstrating the pattern
 - **Monorepo architecture** — npm workspaces with `shared`, `core`, and `web` packages
 - **CI pipeline** — GitHub Actions running lint, typecheck, build, and test on every push/PR
@@ -85,7 +87,9 @@ Try InspectoRepo locally in three steps:
    ```bash
    npm run dev
    ```
-   Open the URL shown in the terminal. The UI skeleton is displayed; folder selection and analysis features are under active development.
+   Open the URL shown in the terminal. Click **Select Folder** (Chrome/Edge) or **Upload Folder** (any browser) to load a TypeScript project. Use the sidebar checkboxes to pick directories, then click **Analyze**.
+
+   > **Browser support:** The folder picker uses the File System Access API (Chrome/Edge). Other browsers can use the Upload Folder fallback.
 
 ## Interface Preview
 
@@ -100,7 +104,8 @@ Try InspectoRepo locally in three steps:
 - [x] Monorepo setup with npm workspaces
 - [x] Core analysis engine skeleton
 - [x] VSCode-like UI layout
-- [ ] File System Access API integration
+- [x] File System Access API integration + fallback upload
+- [x] Directory tree with selection
 - [ ] Rule engine (optional chaining, boolean simplification, early returns, unused imports, complexity)
 - [ ] Issue list + diff preview
 - [ ] Markdown report export

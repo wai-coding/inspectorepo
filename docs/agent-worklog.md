@@ -134,3 +134,41 @@ npm test            # all tests pass
 3. Merge PR: `gh pr merge --merge --delete-branch=false`
 
 Or create the PR via the GitHub web UI at: https://github.com/wai-coding/inspectorepo/compare/main...dev
+
+---
+
+## 2026-03-05 — M2: Folder Input + Directory Tree
+
+### What was implemented
+
+- **`packages/core/src/file-filter.ts`** — reusable exclude rules (`isExcludedDir`, `filterExcludedPaths`), directory tree builder (`buildDirectoryTree`), default dir picker (`pickDefaultDirs`), and dir-based file filter (`filterBySelectedDirs`). Excludes `node_modules`, `dist`, `build`, `.git`, `.next`, `out`, `coverage`, `.turbo`, `.cache`, and all hidden directories.
+- **`packages/core/src/file-filter.test.ts`** — 16 unit tests covering exclude rules, path filtering, tree building, default dir selection, and dir-based filtering.
+- **`apps/web/src/folder-reader.ts`** — folder selection via File System Access API (`selectFolderViaAPI`) and fallback upload via `<input webkitdirectory>` (`readUploadedFiles`). Processes files through core exclude + TS/TSX filters.
+- **`apps/web/src/useAppState.ts`** — central app state hook managing folder name, file list, directory tree, selected dirs, and analysis report. Supports localStorage persistence for dir selections.
+- **Updated UI components:**
+  - `TopBar` — "Select Folder", "Upload Folder", "Analyze" buttons + folder/dir status display
+  - `Sidebar` — directory list with checkboxes and file counts
+  - `MainPanel` — empty state ("No issues yet — run analysis") when report has zero issues
+- **`eslint.config.mjs`** — added browser globals (`FileList`, `File`, `FileSystemDirectoryHandle`, `HTMLInputElement`, `localStorage`)
+- **Stubbed analysis** — the Analyze button produces an `AnalysisReport` with zero issues (rule engine is M3)
+
+### Why
+
+M2 delivers the first user-facing interaction: selecting a folder, seeing its directory structure, choosing which directories to scan. This is the prerequisite for rule-based analysis in M3.
+
+### Design decisions
+
+- **Core `file-filter` module** — kept in `packages/core` so the same exclude/filter logic can be reused by a future CLI package
+- **`VirtualFile` abstraction** — the web app converts both FS Access API handles and uploaded FileList entries into a flat `{ path, content }` array, decoupling the UI from the browser API
+- **Async iterator workaround** — `FileSystemDirectoryHandle.values()` lacks TS types; used manual `Symbol.asyncIterator` cast to avoid adding custom type declarations
+- **localStorage dirs** — best-effort persistence: saved per folder name, silently ignored on error
+
+### How to verify
+
+```bash
+npm run lint        # zero errors
+npm run typecheck   # zero errors
+npm run build       # builds shared → core → web
+npm test            # 23 tests pass (7 analyzer + 16 file-filter)
+npm run dev         # open browser, select folder, see directory tree
+```

@@ -111,6 +111,32 @@ Main analysis orchestrator:
 
 7 tests covering scanner filtering and analyzer behavior (empty input, file filtering, placeholder rule output).
 
+### `src/file-filter.ts`
+
+Exclude rules and directory tree utilities:
+
+- `isExcludedDir(name)` — returns true for `node_modules`, `dist`, `build`, `.git`, hidden dirs, etc.
+- `filterExcludedPaths(filePaths)` — drops any path containing an excluded directory segment
+- `buildDirectoryTree(filePaths)` — groups files by top-level directory, returns `DirEntry[]` with name + count
+- `pickDefaultDirs(dirs)` — selects `src` if present, otherwise first available directory
+- `filterBySelectedDirs(filePaths, selectedDirs)` — keeps only files under selected top-level dirs
+
+```ts
+interface DirEntry {
+  name: string;
+  fileCount: number;
+}
+```
+
+### `src/file-filter.test.ts`
+
+16 tests covering:
+- exclude rules (`isExcludedDir`)
+- path filtering (`filterExcludedPaths`)
+- directory tree building
+- default directory selection
+- filtering by selected directories
+
 ---
 
 ## `apps/web`
@@ -123,19 +149,39 @@ App entry point. Renders `<App />` into `#root`.
 
 ### `src/App.tsx`
 
-Root layout component. Composes `TopBar`, `Sidebar`, `MainPanel`, and `DetailsPanel` in a CSS flex layout.
+Root layout component. Composes `TopBar`, `Sidebar`, `MainPanel`, and `DetailsPanel`. Uses `useAppState` hook to manage folder/directory state and passes props to child components.
+
+### `src/folder-reader.ts`
+
+Browser folder input abstraction:
+
+- `selectFolderViaAPI()` — uses File System Access API's `showDirectoryPicker()` (Chrome/Edge), recursively reads all files
+- `readUploadedFiles(fileList)` — fallback using `<input webkitdirectory>`, extracts relative paths
+- `processFiles(files)` — applies core exclude rules and TS/TSX filter to produce clean file list
+
+Both methods return `{ name: string; files: VirtualFile[] }` where `VirtualFile` is `{ path: string; content: string }`.
+
+### `src/useAppState.ts`
+
+Central React state hook (`useAppState`) managing:
+- `folderName` — selected folder name
+- `allFiles` — processed (filtered) file list
+- `dirs` / `selectedDirs` — directory tree and user selection
+- `report` — analysis report (null until Analyze is clicked)
+
+Exposes handlers: `handleSelectFolder`, `handleUploadFolder`, `toggleDir`, `handleAnalyze`, and a derived `canAnalyze` boolean. Persists selected directories in localStorage per folder name.
 
 ### `src/components/TopBar.tsx`
 
-Header bar with app title and status text.
+Header bar with app title, status text, and action buttons: "Select Folder" (primary), "Upload Folder" (fallback with hidden file input), and "Analyze" (enabled when folder + dirs are selected).
 
 ### `src/components/Sidebar.tsx`
 
-Left panel — will display the file tree once folder selection is implemented.
+Left panel showing directory tree. When a folder is loaded, displays a checkbox list of top-level directories with file counts. Checkboxes toggle directory selection.
 
 ### `src/components/MainPanel.tsx`
 
-Center panel — will show issues list and analysis results.
+Center panel. Shows a placeholder prompt before analysis, an "empty state" when analysis returns zero issues, or a summary of found issues.
 
 ### `src/components/DetailsPanel.tsx`
 
@@ -143,4 +189,4 @@ Right panel — will show issue details and diff previews.
 
 ### `src/styles/global.css`
 
-Dark theme with CSS custom properties (VSCode-inspired colors). Defines the flex layout grid.
+Dark theme with CSS custom properties (VSCode-inspired colors). Defines the flex layout grid, button styles (`.btn`, `.btn-primary`, `.btn-secondary`, `.btn-accent`), directory list styles (`.dir-list`, `.dir-label`), and empty state layout.
