@@ -1,4 +1,4 @@
-import { filterExcludedPaths } from '@inspectorepo/core';
+import { filterExcludedPaths, isExcludedDir } from '@inspectorepo/core';
 import { isAnalyzableFile } from '@inspectorepo/core';
 import type { VirtualFile } from '@inspectorepo/shared';
 
@@ -21,25 +21,18 @@ async function readDirectoryHandle(
   prefix: string,
 ): Promise<VirtualFile[]> {
   const files: VirtualFile[] = [];
-  const iter = (handle as unknown as AsyncIterable<FileSystemHandle>)[Symbol.asyncIterator]();
 
-  for (;;) {
-    const { value: entry, done } = await iter.next();
-    if (done) break;
+  for await (const [name, entry] of handle.entries()) {
+    if (isExcludedDir(name)) continue;
 
-    const entryPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    const entryPath = prefix ? `${prefix}/${name}` : name;
 
     if (entry.kind === 'directory') {
-      const sub = await handle.getDirectoryHandle(entry.name).catch(() => null);
-      if (sub) {
-        files.push(...(await readDirectoryHandle(sub, entryPath)));
-      }
+      files.push(...(await readDirectoryHandle(entry as FileSystemDirectoryHandle, entryPath)));
     } else {
-      // Read content for analyzable files only
-      if (isAnalyzableFile(entry.name)) {
+      if (isAnalyzableFile(name)) {
         try {
-          const fileHandle = await handle.getFileHandle(entry.name);
-          const file = await fileHandle.getFile();
+          const file = await (entry as FileSystemFileHandle).getFile();
           const content = await file.text();
           files.push({ path: entryPath, content });
         } catch {

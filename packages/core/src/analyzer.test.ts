@@ -139,6 +139,79 @@ describe('unused-imports rule', () => {
     });
     expect(report.issues.length).toBe(0);
   });
+
+  it('generates correct patch for default + named imports with unused named', () => {
+    const files = [
+      {
+        path: 'src/test.ts',
+        content: [
+          'import React, { useState, useEffect } from "react";',
+          '',
+          'export function App() { return React.createElement("div", null, useState(0)); }',
+          '',
+        ].join('\n'),
+      },
+    ];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [unusedImportsRule] },
+    });
+    expect(report.issues.length).toBe(1);
+    expect(report.issues[0].message).toContain('useEffect');
+    expect(report.issues[0].suggestion.proposedPatch).toContain("import React, { useState } from 'react';");
+  });
+
+  it('removes entire namespace import when unused', () => {
+    const files = [
+      {
+        path: 'src/test.ts',
+        content: 'import * as fs from "fs";\n\nconst x = 1;\n',
+      },
+    ];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [unusedImportsRule] },
+    });
+    expect(report.issues.length).toBe(1);
+    expect(report.issues[0].message).toContain('fs');
+    expect(report.issues[0].suggestion.proposedPatch).toContain('- import * as fs from "fs";');
+  });
+
+  it('removes entire import when all named imports unused', () => {
+    const files = [
+      {
+        path: 'src/test.ts',
+        content: 'import { a, b } from "x";\n\nconst z = 1;\n',
+      },
+    ];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [unusedImportsRule] },
+    });
+    expect(report.issues.length).toBe(1);
+    expect(report.issues[0].message).toContain('entire import');
+    expect(report.issues[0].suggestion.proposedPatch).toContain('- import { a, b } from "x";');
+  });
+
+  it('removes entire import when unused default only', () => {
+    const files = [
+      {
+        path: 'src/test.ts',
+        content: 'import React from "react";\n\nconst x = 1;\n',
+      },
+    ];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [unusedImportsRule] },
+    });
+    expect(report.issues.length).toBe(1);
+    expect(report.issues[0].message).toContain('react');
+    expect(report.issues[0].suggestion.proposedPatch).toContain('- import React from "react";');
+  });
 });
 
 describe('complexity-hotspot rule', () => {

@@ -107,7 +107,7 @@ File filtering utilities: `isAnalyzableFile(name)` and `filterAnalyzableFiles(na
 
 ### `src/file-filter.ts`
 
-Exclude rules and directory tree utilities: `isExcludedDir`, `filterExcludedPaths`, `buildDirectoryTree`, `pickDefaultDirs`, `filterBySelectedDirs`.
+Exclude rules and directory tree utilities: `isExcludedDir`, `filterExcludedPaths`, `buildDirectoryTree`, `pickDefaultDirs`, `filterBySelectedDirs`, `normalizeRelativePath`.
 
 ### `src/rules/index.ts`
 
@@ -115,7 +115,15 @@ Registry exporting all rules and the `allRules` array.
 
 ### `src/rules/unused-imports.ts`
 
-Detects unused import specifiers using `findReferencesAsNodes()`. Handles default, namespace, and named imports. Skips side-effect imports. Proposes removing unused specifiers or entire imports.
+Detects unused import specifiers using `findReferencesAsNodes()`. Handles default, namespace, and named imports separately, tracking which category each specifier falls into. Patch generation logic:
+- All unused → remove entire import line
+- Default kept + some named kept → `import Default, { named } from '...'`
+- Only named kept → `import { named } from '...'`
+- Only default kept → `import Default from '...'`
+- Only namespace kept → `import * as NS from '...'`
+- Complex combinations (default+namespace, namespace+named) → text-only suggestion, no code patch
+
+Skips side-effect imports (`import './polyfill'`).
 
 ### `src/rules/complexity-hotspot.ts`
 
@@ -154,7 +162,7 @@ Root layout. Composes `TopBar`, `Sidebar`, `MainPanel`, `DetailsPanel`. Passes `
 ### `src/folder-reader.ts`
 
 Browser folder input abstraction:
-- `selectFolderViaAPI()` — File System Access API, reads `.ts/.tsx` file content inline during traversal
+- `selectFolderViaAPI()` — File System Access API using `handle.entries()` for robust cross-browser iteration. Filters excluded directories early via `isExcludedDir()` during traversal. Reads `.ts/.tsx` file content inline.
 - `readUploadedFiles(fileList)` — fallback using `<input webkitdirectory>`, reads file content via `File.text()`
 - `processFiles(files)` — applies exclude rules and TS/TSX filter
 
