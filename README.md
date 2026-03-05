@@ -10,9 +10,13 @@ Manual code review is time-consuming and inconsistent. InspectoRepo provides det
 
 - **Folder selection** — pick a local codebase using File System Access API (Chrome/Edge) with a drag-and-drop upload fallback
 - **Directory tree** — browse top-level directories with checkboxes; defaults to `src/` if present
-- **TS/TSX analysis engine** — scanner, file-filter, and analyzer pipeline using [ts-morph](https://ts-morph.com/) (foundation in place; rule implementations coming next)
+- **TS/TSX analysis engine** — deterministic pipeline: scan → parse (ts-morph in-memory) → apply rules → score → report
+- **Implemented rules** — `unused-imports` (warns on unreferenced imports with proposed fix) and `complexity-hotspot` (flags functions above complexity threshold)
+- **Rules in progress** — `optional-chaining`, `boolean-simplification`, `early-return` (stubs defined, specs in `docs/architecture-and-rules.md`)
+- **Issue list UI** — filterable by severity/search, with detail panel showing suggestions and proposed patches
+- **Scoring** — 0–100 score based on issue severity counts
+- **Markdown export** — download a full analysis report as `.md`
 - **Exclude rules** — automatically skips `node_modules`, `dist`, `build`, `.git`, hidden dirs, and other noise
-- **Rule interface** — pluggable rule contract with a placeholder rule demonstrating the pattern
 - **Monorepo architecture** — npm workspaces with `shared`, `core`, and `web` packages
 - **CI pipeline** — GitHub Actions running lint, typecheck, build, and test on every push/PR
 
@@ -33,10 +37,10 @@ inspectorepo/
 ├── apps/
 │   └── web/              # React frontend (Vite)
 ├── packages/
-│   ├── core/             # Analysis engine (ts-morph, rules)
-│   └── shared/           # Shared types (Issue, AnalysisReport, etc.)
+│   ├── core/             # Analysis engine (ts-morph, rules, scoring, report)
+│   └── shared/           # Shared types (Issue, AnalysisReport, VirtualFile)
 ├── ai/                   # AI agent instructions & project context
-├── docs/                 # Worklog, code walkthrough
+├── docs/                 # Architecture, worklog, code walkthrough
 └── package.json          # Root workspace config
 ```
 
@@ -106,9 +110,16 @@ Try InspectoRepo locally in three steps:
 - [x] VSCode-like UI layout
 - [x] File System Access API integration + fallback upload
 - [x] Directory tree with selection
-- [ ] Rule engine (optional chaining, boolean simplification, early returns, unused imports, complexity)
-- [ ] Issue list + diff preview
-- [ ] Markdown report export
+- [x] Real analysis pipeline (scan → parse → rules → score → report)
+- [x] Rule: `unused-imports` — detect and suggest removal of unused imports
+- [x] Rule: `complexity-hotspot` — flag high-complexity functions with refactor suggestions
+- [ ] Rule: `optional-chaining` (spec defined, stub in place)
+- [ ] Rule: `boolean-simplification` (spec defined, stub in place)
+- [ ] Rule: `early-return` (spec defined, stub in place)
+- [x] Issue list with severity filters + search
+- [x] Detail panel with proposed patches + copy
+- [x] Markdown report export
+- [x] Scoring (0–100)
 
 ### V2 (planned)
 
