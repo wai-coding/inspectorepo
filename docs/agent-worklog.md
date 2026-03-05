@@ -4,6 +4,51 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-05 — M3: Core Analysis Pipeline + Report UI
+
+### What was implemented
+
+- **Architecture doc** (`docs/architecture-and-rules.md`) — core architecture review with key decisions (VirtualFile input, in-memory ts-morph, deterministic ordering, centralized excludes, scoring formula) plus full specs for 5 rules.
+- **Shared types overhaul** — `Issue` now includes `id`, `range: { start, end }`, `suggestion: { summary, details, proposedPatch?, proposedDiff? }`. New `VirtualFile`, `AnalysisSummary`, `AnalysisMeta` types. `AnalysisReport` restructured to `{ summary, issues, meta }`. Severity changed from `'warning'` to `'warn'`.
+- **Core analysis pipeline** — `analyzeCodebase({ files, selectedDirectories, options? })` in `analyzer.ts`: filters files by selected dirs + excludes + `.ts/.tsx`, creates in-memory ts-morph `Project`, runs all rules, sorts issues deterministically (severity → ruleId → filePath → line → column).
+- **Rule system** — new `Rule` interface: `{ id, title, severity, run(ctx: RuleContext) }` where `RuleContext` provides `sourceFile` + `filePath`. Registry in `rules/index.ts` exports `allRules[]`.
+- **unused-imports rule** — detects unused default, namespace, and named import specifiers via `findReferencesAsNodes()`. Proposes removal of individual specifiers or entire import. Skips side-effect imports.
+- **complexity-hotspot rule** — counts control-flow nodes (if/else, switch cases, ternaries, logical ops, loops, try/catch) with nesting depth bonus. Flags functions scored ≥ 12.
+- **Stub rules** — `optional-chaining`, `boolean-simplification`, `early-return` return empty arrays; specs in architecture doc.
+- **Scoring** (`scoring.ts`) — base 100, −10/error, −5/warn, −2/info, floor 0.
+- **Markdown report** (`report.ts`) — header + summary table + issues table + per-file detail sections with proposed patches.
+- **Web: file content reading** — `folder-reader.ts` now reads actual file content (FS Access API reads `.ts/.tsx` content inline; upload fallback reads via `File.text()`).
+- **Web: real analysis call** — `useAppState.ts` calls `analyzeCodebase()` instead of stub. Supports `selectIssue()` and `exportMarkdown()`.
+- **UI: issue list** — `MainPanel` shows severity filters (All/Error/Warning/Info) + search + clickable issue rows.
+- **UI: details panel** — `DetailsPanel` shows selected issue's severity, rule, location, message, suggestion, and proposed patch with copy button.
+- **UI: top bar** — shows score badge, issue/file counts, export button when report is available.
+- **Tests** — 31 tests total (15 analyzer + 16 file-filter). New tests cover: unused-imports detection (full, partial, used, side-effect), complexity threshold behavior, markdown report sections.
+- **README** — updated features, structure, and roadmap to reflect M3 reality.
+
+### Why
+
+M3 goal: deliver a working end-to-end analysis pipeline. Users can now select a folder, run analysis, see real issues, view suggestions, and export reports — all deterministically.
+
+### How to verify
+
+```bash
+npm run lint        # zero errors
+npm run typecheck   # zero errors
+npm run build       # all packages build
+npm test            # 31 tests pass
+npm run dev         # open browser, select a TS project, click Analyze
+```
+
+### Design decisions
+
+- **In-memory ts-morph** — `useInMemoryFileSystem: true` avoids filesystem access in the analysis engine. Works in browser but ts-morph is heavy (~6MB bundle). Future: code-split or move analysis to a worker.
+- **Severity `'warn'` not `'warning'`** — shorter, consistent with common tooling (ESLint, etc.), and aligns with the architecture spec.
+- **`findReferencesAsNodes()` for unused imports** — more reliable than text search; handles re-exports, aliases, and namespace imports correctly.
+- **Simple linear scoring** — easy to test, reason about, and explain to users. Can be refined later.
+- **PR automation** — `gh pr create` + `gh pr merge` + `git reset --hard origin/main` per prompt-master workflow.
+
+---
+
 ## 2026-03-05 — Bootstrap Monorepo
 
 ### What was implemented

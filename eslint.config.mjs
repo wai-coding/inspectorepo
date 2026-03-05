@@ -33,6 +33,8 @@ export default [
         FileSystemFileHandle: 'readonly',
         FileSystemHandle: 'readonly',
         localStorage: 'readonly',
+        navigator: 'readonly',
+        Blob: 'readonly',
       },
     },
     plugins: {

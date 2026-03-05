@@ -20,7 +20,7 @@ Project references file — points `tsc -b` at all three packages for incrementa
 
 ### `eslint.config.mjs`
 
-Flat ESLint config with TypeScript parser, React Hooks, and React Refresh plugins. Browser globals configured for DOM APIs.
+Flat ESLint config with TypeScript parser, React Hooks, and React Refresh plugins. Browser globals configured for DOM APIs including `navigator` and `Blob`.
 
 ### `vitest.config.ts`
 
@@ -28,29 +28,17 @@ Vitest configured to find test files in `packages/*/src/**/*.test.ts`.
 
 ### `LICENSE`
 
-MIT License (copyright 2026 Luis Castro). Grants permission to use, copy, modify, merge, publish, distribute, sublicense, and sell copies of the software.
+MIT License (copyright 2026 Luis Castro).
 
 ---
 
-## `.github/workflows/ci.yml`
+## `docs/architecture-and-rules.md`
 
-GitHub Actions CI pipeline. Runs on every push to `main`/`dev` and on all pull requests. Steps: checkout, setup Node 20 with npm cache, `npm install`, lint, typecheck, build, test.
+Architecture review for M3 and specifications for the first 5 rules. Key sections:
+- **Core architecture review** — package layout, key decisions (VirtualFile input, in-memory ts-morph, deterministic output, centralized excludes, scoring formula), tradeoffs table
+- **First 5 rules spec** — `optional-chaining`, `unused-imports`, `boolean-simplification`, `early-return`, `complexity-hotspot` — each with detection, examples, safety constraints, fix format, severity, and implementation approach
 
-Uses `npm install` (not `npm ci`) because the repo does not commit a lockfile.
-
----
-
-## `screenshots/`
-
-### `screenshots/README.md`
-
-Placeholder directory for UI screenshots. Will be populated as features are implemented.
-
----
-
-## `ai/prompt-master.md` — PR Automation Section
-
-Documents the automated PR workflow: after each milestone, the agent commits, pushes, creates a PR via `gh pr create`, merges via `gh pr merge`, and resets `dev` to `origin/main` using `git reset --hard` + `git push --force-with-lease`. Includes fallbacks for missing `gh` CLI, authentication issues, and branch protection.
+This document guides all rule implementation work.
 
 ---
 
@@ -62,10 +50,15 @@ Shared type definitions used by both `core` and `web`.
 
 Core data types:
 
-- `Severity` — `'info' | 'warning' | 'error'`
-- `Issue` — a single code quality finding (ruleId, message, location, optional diff)
-- `AnalysisResult` — issues for one file
-- `AnalysisReport` — full analysis output with summary stats
+- `Severity` — `'info' | 'warn' | 'error'`
+- `Position` — `{ line, column }`
+- `Range` — `{ start: Position, end: Position }`
+- `Suggestion` — `{ summary, details, proposedPatch?, proposedDiff? }`
+- `Issue` — `{ id, ruleId, severity, message, filePath, range, suggestion }`
+- `VirtualFile` — `{ path, content }`
+- `AnalysisSummary` — `{ totalIssues, bySeverity, score }`
+- `AnalysisMeta` — `{ analyzedFilesCount, analyzedDirectories }`
+- `AnalysisReport` — `{ summary, issues, meta }`
 
 ### `src/index.ts`
 
@@ -75,67 +68,74 @@ Re-exports all types from `types.ts`.
 
 ## `packages/core`
 
-The analysis engine. Scans files, runs rules, produces reports.
+The analysis engine. Parses files, runs rules, computes scores, generates reports.
 
-### `src/scanner.ts`
+### `src/index.ts`
 
-File filtering utilities:
-
-- `isAnalyzableFile(fileName)` — returns true for `.ts` / `.tsx`
-- `filterAnalyzableFiles(fileNames)` — filters a list to only analyzable files
-
-### `src/rule.ts`
-
-The `Rule` interface — every analysis rule implements:
-
-```ts
-interface Rule {
-  id: string;
-  name: string;
-  description: string;
-  run(filePath: string, content: string): Issue[];
-}
-```
-
-### `src/rules/placeholder.ts`
-
-A no-op rule that always returns `[]`. Demonstrates the Rule interface contract.
+Public API surface: `analyzeCodebase`, `buildMarkdownReport`, `computeScore`, all rules, file-filter utilities, scanner.
 
 ### `src/analyzer.ts`
 
-Main analysis orchestrator:
+Main analysis pipeline entry point:
 
-- `analyzeFiles(files, rules?)` — filters to analyzable files, runs all rules on each, aggregates into an `AnalysisReport`
+```ts
+analyzeCodebase({ files, selectedDirectories, options? }): AnalysisReport
+```
 
-### `src/analyzer.test.ts`
+Filters files (selected dirs → excludes → .ts/.tsx), sorts paths for determinism, creates in-memory ts-morph `Project`, runs all rules on each source file, sorts issues by severity → ruleId → filePath → line → column.
 
-7 tests covering scanner filtering and analyzer behavior (empty input, file filtering, placeholder rule output).
+### `src/rule.ts`
+
+Rule and context interfaces:
+
+```ts
+interface RuleContext { sourceFile: SourceFile; filePath: string; }
+interface Rule { id: string; title: string; severity: Severity; run(ctx: RuleContext): Issue[]; }
+```
+
+### `src/scoring.ts`
+
+`computeScore(issues)` — base 100, subtract per-issue penalties (error: −10, warn: −5, info: −2), floor at 0. Returns `AnalysisSummary`.
+
+### `src/report.ts`
+
+`buildMarkdownReport(report)` — produces full markdown with header, summary table, issues table, and per-file detail sections with proposed patches.
+
+### `src/scanner.ts`
+
+File filtering utilities: `isAnalyzableFile(name)` and `filterAnalyzableFiles(names)`.
 
 ### `src/file-filter.ts`
 
-Exclude rules and directory tree utilities:
+Exclude rules and directory tree utilities: `isExcludedDir`, `filterExcludedPaths`, `buildDirectoryTree`, `pickDefaultDirs`, `filterBySelectedDirs`.
 
-- `isExcludedDir(name)` — returns true for `node_modules`, `dist`, `build`, `.git`, hidden dirs, etc.
-- `filterExcludedPaths(filePaths)` — drops any path containing an excluded directory segment
-- `buildDirectoryTree(filePaths)` — groups files by top-level directory, returns `DirEntry[]` with name + count
-- `pickDefaultDirs(dirs)` — selects `src` if present, otherwise first available directory
-- `filterBySelectedDirs(filePaths, selectedDirs)` — keeps only files under selected top-level dirs
+### `src/rules/index.ts`
 
-```ts
-interface DirEntry {
-  name: string;
-  fileCount: number;
-}
-```
+Registry exporting all rules and the `allRules` array.
+
+### `src/rules/unused-imports.ts`
+
+Detects unused import specifiers using `findReferencesAsNodes()`. Handles default, namespace, and named imports. Skips side-effect imports. Proposes removing unused specifiers or entire imports.
+
+### `src/rules/complexity-hotspot.ts`
+
+Counts control-flow complexity per function: if/else, switch cases, ternaries, logical operators, loops, try/catch, plus nesting depth bonus. Flags functions scoring ≥ 12.
+
+### `src/rules/optional-chaining.ts`, `boolean-simplification.ts`, `early-return.ts`
+
+Stub rules returning empty arrays. Specs defined in `docs/architecture-and-rules.md`.
+
+### `src/rules/placeholder.ts`
+
+Legacy no-op rule. Kept for backward compatibility.
+
+### `src/analyzer.test.ts`
+
+15 tests: scanner filtering, analyzeCodebase pipeline, unused-imports detection (full/partial/used/side-effect), complexity threshold behavior, markdown report generation.
 
 ### `src/file-filter.test.ts`
 
-16 tests covering:
-- exclude rules (`isExcludedDir`)
-- path filtering (`filterExcludedPaths`)
-- directory tree building
-- default directory selection
-- filtering by selected directories
+16 tests covering exclude rules, path filtering, directory tree building, default selection, and filtering by selected directories.
 
 ---
 
@@ -149,44 +149,44 @@ App entry point. Renders `<App />` into `#root`.
 
 ### `src/App.tsx`
 
-Root layout component. Composes `TopBar`, `Sidebar`, `MainPanel`, and `DetailsPanel`. Uses `useAppState` hook to manage folder/directory state and passes props to child components.
+Root layout. Composes `TopBar`, `Sidebar`, `MainPanel`, `DetailsPanel`. Passes `report`, `selectedIssue`, `selectIssue`, and `exportMarkdown` to children.
 
 ### `src/folder-reader.ts`
 
 Browser folder input abstraction:
+- `selectFolderViaAPI()` — File System Access API, reads `.ts/.tsx` file content inline during traversal
+- `readUploadedFiles(fileList)` — fallback using `<input webkitdirectory>`, reads file content via `File.text()`
+- `processFiles(files)` — applies exclude rules and TS/TSX filter
 
-- `selectFolderViaAPI()` — uses File System Access API's `showDirectoryPicker()` (Chrome/Edge), recursively reads all files
-- `readUploadedFiles(fileList)` — fallback using `<input webkitdirectory>`, extracts relative paths
-- `processFiles(files)` — applies core exclude rules and TS/TSX filter to produce clean file list
-
-Both methods return `{ name: string; files: VirtualFile[] }` where `VirtualFile` is `{ path: string; content: string }`.
+Both methods return `{ name, files: VirtualFile[] }` with actual file content populated.
 
 ### `src/useAppState.ts`
 
-Central React state hook (`useAppState`) managing:
-- `folderName` — selected folder name
-- `allFiles` — processed (filtered) file list
-- `dirs` / `selectedDirs` — directory tree and user selection
-- `report` — analysis report (null until Analyze is clicked)
-
-Exposes handlers: `handleSelectFolder`, `handleUploadFolder`, `toggleDir`, `handleAnalyze`, and a derived `canAnalyze` boolean. Persists selected directories in localStorage per folder name.
+Central state hook managing folder, files, dirs, report, and selected issue. Key functions:
+- `handleAnalyze` — calls `analyzeCodebase()` from core
+- `selectIssue` — sets the currently selected issue for the detail panel
+- `exportMarkdown` — calls `buildMarkdownReport()` and triggers browser download
 
 ### `src/components/TopBar.tsx`
 
-Header bar with app title, status text, and action buttons: "Select Folder" (primary), "Upload Folder" (fallback with hidden file input), and "Analyze" (enabled when folder + dirs are selected).
+Header bar with score badge, issue/file counts, folder actions, Analyze button, and Export .md button.
 
 ### `src/components/Sidebar.tsx`
 
-Left panel showing directory tree. When a folder is loaded, displays a checkbox list of top-level directories with file counts. Checkboxes toggle directory selection.
+Left panel with directory tree checkboxes.
 
 ### `src/components/MainPanel.tsx`
 
-Center panel. Shows a placeholder prompt before analysis, an "empty state" when analysis returns zero issues, or a summary of found issues.
+Center panel. Shows:
+- Placeholder before analysis
+- "No issues found" + score when clean
+- Severity filter buttons (All/Errors/Warnings/Info) + search input
+- Clickable issue rows (severity, rule, file:line, message)
 
 ### `src/components/DetailsPanel.tsx`
 
-Right panel — will show issue details and diff previews.
+Right panel showing selected issue details: severity badge, rule id, file location, message, suggestion summary/details, and proposed patch with copy button.
 
 ### `src/styles/global.css`
 
-Dark theme with CSS custom properties (VSCode-inspired colors). Defines the flex layout grid, button styles (`.btn`, `.btn-primary`, `.btn-secondary`, `.btn-accent`), directory list styles (`.dir-list`, `.dir-label`), and empty state layout.
+Dark theme with CSS custom properties. Styles for: layout, top bar (summary badge), issue toolbar (filter buttons, search), issue list rows, detail panel sections, proposed patch code block.

@@ -1,9 +1,8 @@
 import { useState, useCallback } from 'react';
-import type { AnalysisReport } from '@inspectorepo/shared';
-import { buildDirectoryTree, pickDefaultDirs, filterBySelectedDirs } from '@inspectorepo/core';
+import type { AnalysisReport, Issue, VirtualFile } from '@inspectorepo/shared';
+import { buildDirectoryTree, pickDefaultDirs, analyzeCodebase, buildMarkdownReport } from '@inspectorepo/core';
 import type { DirEntry } from '@inspectorepo/core';
 import { selectFolderViaAPI, readUploadedFiles, processFiles } from './folder-reader';
-import type { VirtualFile } from './folder-reader';
 
 export interface AppState {
   folderName: string | null;
@@ -11,6 +10,7 @@ export interface AppState {
   dirs: DirEntry[];
   selectedDirs: string[];
   report: AnalysisReport | null;
+  selectedIssue: Issue | null;
   loading: boolean;
 }
 
@@ -20,6 +20,7 @@ const initialState: AppState = {
   dirs: [],
   selectedDirs: [],
   report: null,
+  selectedIssue: null,
   loading: false,
 };
 
@@ -59,6 +60,7 @@ export function useAppState() {
       dirs,
       selectedDirs,
       report: null,
+      selectedIssue: null,
       loading: false,
     });
   }, []);
@@ -69,8 +71,8 @@ export function useAppState() {
   }, [loadFolder]);
 
   const handleUploadFolder = useCallback(
-    (fileList: FileList) => {
-      const result = readUploadedFiles(fileList);
+    async (fileList: FileList) => {
+      const result = await readUploadedFiles(fileList);
       loadFolder(result.name, result.files);
     },
     [loadFolder],
@@ -82,30 +84,35 @@ export function useAppState() {
         ? prev.selectedDirs.filter((d) => d !== dirName)
         : [...prev.selectedDirs, dirName];
       if (prev.folderName) saveDirs(prev.folderName, next);
-      return { ...prev, selectedDirs: next, report: null };
+      return { ...prev, selectedDirs: next, report: null, selectedIssue: null };
     });
   }, []);
 
   const handleAnalyze = useCallback(() => {
     setState((prev) => {
-      const selected = filterBySelectedDirs(
-        prev.allFiles.map((f) => f.path),
-        prev.selectedDirs,
-      );
-      // Stub: return empty report for now
-      const report: AnalysisReport = {
-        results: selected.map((filePath) => ({
-          filePath,
-          issues: [],
-          scannedAt: new Date().toISOString(),
-        })),
-        totalIssues: 0,
-        scannedFiles: selected.length,
-        createdAt: new Date().toISOString(),
-      };
-      return { ...prev, report };
+      const report = analyzeCodebase({
+        files: prev.allFiles,
+        selectedDirectories: prev.selectedDirs,
+      });
+      return { ...prev, report, selectedIssue: null };
     });
   }, []);
+
+  const selectIssue = useCallback((issue: Issue | null) => {
+    setState((prev) => ({ ...prev, selectedIssue: issue }));
+  }, []);
+
+  const exportMarkdown = useCallback(() => {
+    if (!state.report) return;
+    const md = buildMarkdownReport(state.report);
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'inspectorepo-report.md';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [state.report]);
 
   const canAnalyze = state.folderName !== null && state.selectedDirs.length > 0;
 
@@ -116,5 +123,7 @@ export function useAppState() {
     handleUploadFolder,
     toggleDir,
     handleAnalyze,
+    selectIssue,
+    exportMarkdown,
   };
 }

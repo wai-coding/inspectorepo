@@ -1,25 +1,50 @@
-export type Severity = 'info' | 'warning' | 'error';
+export type Severity = 'info' | 'warn' | 'error';
 
-export interface Issue {
-  ruleId: string;
-  message: string;
-  severity: Severity;
-  filePath: string;
+export interface Position {
   line: number;
   column: number;
-  suggestion?: string;
-  diff?: string;
 }
 
-export interface AnalysisResult {
+export interface Range {
+  start: Position;
+  end: Position;
+}
+
+export interface Suggestion {
+  summary: string;
+  details: string;
+  proposedPatch?: string;
+  proposedDiff?: string;
+}
+
+export interface Issue {
+  id: string;
+  ruleId: string;
+  severity: Severity;
+  message: string;
   filePath: string;
-  issues: Issue[];
-  scannedAt: string;
+  range: Range;
+  suggestion: Suggestion;
+}
+
+export interface VirtualFile {
+  path: string;
+  content: string;
+}
+
+export interface AnalysisSummary {
+  totalIssues: number;
+  bySeverity: Record<Severity, number>;
+  score: number;
+}
+
+export interface AnalysisMeta {
+  analyzedFilesCount: number;
+  analyzedDirectories: string[];
 }
 
 export interface AnalysisReport {
-  results: AnalysisResult[];
-  totalIssues: number;
-  scannedFiles: number;
-  createdAt: string;
+  summary: AnalysisSummary;
+  issues: Issue[];
+  meta: AnalysisMeta;
 }

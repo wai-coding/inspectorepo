@@ -1,1 +1,11 @@
-export type { Severity, Issue, AnalysisResult, AnalysisReport } from './types.js';
+export type {
+  Severity,
+  Position,
+  Range,
+  Suggestion,
+  Issue,
+  VirtualFile,
+  AnalysisSummary,
+  AnalysisMeta,
+  AnalysisReport,
+} from './types.js';
