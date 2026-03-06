@@ -4,6 +4,53 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-05 — Screenshots, Demo Video, Sample Report & Fixture Repo
+
+### What was implemented
+
+- **Fixture repo** (`examples/fixture-repo/`) — 4 TypeScript files crafted to trigger all 4 implemented rules:
+  - `api-client.ts` — unused imports (Logger, formatPercentage, config namespace)
+  - `data-processor.ts` — complexity hotspot (score 72, deeply nested control flow) + unused EventEmitter import
+  - `user-utils.ts` — optional chaining (3 guard chains) + boolean simplification (5 patterns: === true, !== false, !!, ternary true/false, ternary false/true)
+  - `formatters.ts` — clean utility file (no issues, needed as import target)
+- **Report generator** (`examples/generate-report.ts`) — Node script that runs `analyzeCodebase()` against the fixture repo and writes `examples/sample-report.md`. Output: 12 issues across all 4 rule types, score 64/100.
+- **Sample report** (`examples/sample-report.md`) — full Markdown analysis report with summary table, issues table, and per-file details with proposed diffs.
+- **Screenshot automation** (`screenshots/capture.ts`) — Playwright script that starts a headless Chromium browser, navigates to the dev server, injects fixture files via a dev-only global, runs analysis, selects an issue, and captures `screenshots/ui-layout.png`.
+- **Demo video recording** (`screenshots/record-demo.ts`) — Playwright script that records a full demo workflow (load files → analyze → click issues → filter → back to all) as `screenshots/demo.webm`.
+- **Dev-only loader** — added `__inspectorepo_loadFolder` global in `useAppState.ts` (only in dev mode via `import.meta.env.DEV`) for E2E test/screenshot automation.
+- **README** — embedded screenshot, added sample report link, updated project structure to include `examples/` and `screenshots/`.
+- **ESLint config** — added ignores for `examples/fixture-repo/**`, `screenshots/*.ts`, `examples/*.ts` (intentionally bad code / Node scripts).
+- **Web tsconfig** — added `"types": ["vite/client"]` for `import.meta.env.DEV`.
+
+### Why
+
+Recruiter-ready visual proof: the screenshot shows the actual UI with real analysis data, the sample report demonstrates export quality, and the fixture repo provides a reproducible demo scenario.
+
+### How to verify
+
+```bash
+npm run lint        # zero errors
+npm run typecheck   # zero errors
+npm run build       # all packages build
+npm test            # 51 tests pass
+
+# Generate sample report
+npx tsx examples/generate-report.ts
+
+# Capture screenshot (requires dev server running)
+npm run dev &
+npx tsx screenshots/capture.ts
+```
+
+### Design decisions
+
+- **Fixture repo over random project** — deterministic, covers all rules, no external dependencies.
+- **Dev-only global** — avoids polluting production code; Playwright can inject files without filesystem access.
+- **ESLint ignores for fixtures** — the fixture files are intentionally bad code; linting them defeats the purpose.
+- **WebM over GIF** — Playwright records WebM natively; GIF conversion requires ffmpeg (documented in screenshots/README.md).
+
+---
+
 ## 2026-03-05 — M4: Optional Chaining + Boolean Simplification Rules
 
 ### What was implemented

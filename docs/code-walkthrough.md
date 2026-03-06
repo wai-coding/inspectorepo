@@ -42,6 +42,46 @@ This document guides all rule implementation work.
 
 ---
 
+## `examples/`
+
+### `fixture-repo/`
+
+Sample TypeScript files designed to trigger all 4 implemented rules when analyzed:
+- `src/api-client.ts` — unused imports (Logger, formatPercentage, config namespace)
+- `src/data-processor.ts` — complexity hotspot (deeply nested control flow, score 72) + unused EventEmitter
+- `src/user-utils.ts` — optional chaining (3 guard chains) + boolean simplification (5 patterns)
+- `src/formatters.ts` — clean utility file (import target, no issues)
+
+### `generate-report.ts`
+
+Node script that collects fixture files, runs `analyzeCodebase()`, and writes `sample-report.md`. Uses `readFileSync` + `readdirSync` to walk the fixture directory.
+
+### `sample-report.md`
+
+Generated Markdown report: 12 issues, score 64/100, covering all 4 rules with proposed diffs.
+
+---
+
+## `screenshots/`
+
+### `capture.ts`
+
+Playwright script for automated UI screenshot capture. Launches Chromium, navigates to dev server, injects fixture files via `__inspectorepo_loadFolder` dev global, runs analysis, selects an issue, and saves `ui-layout.png`.
+
+### `record-demo.ts`
+
+Playwright script that records a full demo workflow as `demo.webm`: load files → analyze → click through issues → filter → back to all.
+
+### `ui-layout.png`
+
+Main UI screenshot showing the VSCode-like dark interface with sidebar, issue list, and detail panel.
+
+### `demo.webm`
+
+Recorded demo video of the analysis workflow.
+
+---
+
 ## `packages/shared`
 
 Shared type definitions used by both `core` and `web`.

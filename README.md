@@ -52,6 +52,10 @@ inspectorepo/
 ├── packages/
 │   ├── core/             # Analysis engine (ts-morph, rules, scoring, report)
 │   └── shared/           # Shared types (Issue, AnalysisReport, VirtualFile)
+├── examples/
+│   ├── fixture-repo/     # Sample TS files for testing all rules
+│   └── sample-report.md  # Generated analysis report
+├── screenshots/          # UI screenshots & Playwright automation
 ├── ai/                   # AI agent instructions & project context
 ├── docs/                 # Architecture, worklog, code walkthrough
 └── package.json          # Root workspace config
@@ -112,7 +116,11 @@ Try InspectoRepo locally in three steps:
 
 ![InspectoRepo UI](./screenshots/ui-layout.png)
 
-> The screenshot above will show the VSCode-like dark interface with the file tree sidebar, issues list in the main panel, and detail/diff view on the right.
+> Dark VSCode-like interface with file tree sidebar, issues list in the main panel, and detail/diff view on the right.
+
+## Sample Report
+
+See [examples/sample-report.md](./examples/sample-report.md) for a full analysis report generated from the [fixture repo](./examples/fixture-repo/).
 
 ## Roadmap
 
@@ -143,7 +151,18 @@ Try InspectoRepo locally in three steps:
 
 ## Screenshots
 
-> Screenshots will be added as features are implemented.
+Screenshot and demo video are generated automatically with Playwright:
+
+```bash
+# Start dev server first
+npm run dev
+
+# Capture screenshot
+npx tsx screenshots/capture.ts
+
+# Record demo video
+npx tsx screenshots/record-demo.ts
+```
 
 ## License
 
