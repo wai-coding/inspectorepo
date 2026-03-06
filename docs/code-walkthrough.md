@@ -226,6 +226,33 @@ Legacy no-op rule. Kept for backward compatibility.
 
 ---
 
+## `packages/cli`
+
+Headless CLI for terminal-based codebase analysis. Thin wrapper around `@inspectorepo/core`.
+
+### `src/index.ts`
+
+Bin entry point (`#!/usr/bin/env node`). Passes `process.argv.slice(2)` to `run()`.
+
+### `src/cli.ts`
+
+Main CLI logic:
+- `parseArgs(args)` — parses `analyze <path>` plus `--dirs`, `--format`, `--out`, `--max-issues`, `--help` options. Returns `CliOptions` or `null` on error.
+- `run(args)` — resolves the target path, reads files via `readFilesFromDisk()`, filters by selected dirs, calls `analyzeCodebase()`, formats output as markdown or JSON, writes to file or stdout.
+
+### `src/fs-reader.ts`
+
+Node filesystem utilities:
+- `readFilesFromDisk(rootDir)` — recursively walks directories using `readdirSync`, skips excluded dirs via `isExcludedDir()`, collects `.ts/.tsx` files as `VirtualFile[]` with content. Results sorted by path for determinism.
+- `parseDirs(input)` — splits comma-separated directory string into array, trims whitespace.
+- `filterByDirs(files, dirs)` — filters `VirtualFile[]` to only files under specified directories. Returns all files when dirs is empty.
+
+### `src/cli.test.ts`
+
+9 tests: `parseDirs` (comma split, whitespace trim, empty input, single dir) and `filterByDirs` (empty dirs, single dir filter, multiple dirs, no match, partial prefix rejection).
+
+---
+
 ## `apps/web`
 
 Vite + React + TypeScript frontend with a VSCode-like layout.

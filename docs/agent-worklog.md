@@ -41,6 +41,49 @@ npm run repopack   # generates v5 exports under ai/exports/
 
 ---
 
+## 2026-03-06 — M6: Headless CLI for InspectoRepo
+
+### What was implemented
+
+- **CLI package** (`packages/cli/`) — new workspace package (`@inspectorepo/cli`) providing the `inspectorepo` bin command for terminal-based codebase analysis.
+- **Commands**: `inspectorepo analyze <path> [options]`
+  - `--dirs src,lib` — comma-separated directories to analyze
+  - `--format md|json` — output format (default: md)
+  - `--out <file>` — write to file instead of stdout
+  - `--max-issues <n>` — limit number of reported issues
+- **fs-reader** (`src/fs-reader.ts`) — recursive file walker using Node `fs`, respects `isExcludedDir` from core, collects `.ts/.tsx` as `VirtualFile[]`.
+- **CLI logic** (`src/cli.ts`) — argument parser, calls `analyzeCodebase()` and `buildMarkdownReport()` from core.
+- **9 tests** — `parseDirs` (4 tests) and `filterByDirs` (5 tests) covering edge cases.
+- **TypeScript config** — `packages/cli/tsconfig.json` extending base, referencing core and shared.
+- **ESLint** — added `process` global to ESLint config for Node CLI code.
+- **README** — added CLI section with 5 example commands, updated project structure and roadmap.
+
+### Why
+
+M6 goal: provide a headless CLI that proves packaging, filesystem integration, and deterministic output. Makes the project more accessible — users can try it without the web UI.
+
+### How to verify
+
+```bash
+npm run lint        # zero errors
+npm run typecheck   # zero errors
+npm run build       # all packages build
+npm test            # 65 tests pass
+
+# Test CLI against fixture repo
+node packages/cli/dist/index.js analyze examples/fixture-repo --dirs src
+node packages/cli/dist/index.js analyze examples/fixture-repo --format json --out test.json
+```
+
+### Design decisions
+
+- **Reuses core engine** — no logic duplication; CLI is a thin wrapper around `analyzeCodebase()` and `buildMarkdownReport()`.
+- **No global install needed** — runs via `node packages/cli/dist/index.js` or `npx` after publishing.
+- **Deterministic output** — same files always produce same report (sorted paths, sorted issues).
+- **process.exitCode over process.exit()** — allows cleanup and doesn't abort abruptly.
+
+---
+
 ## 2026-03-06 — M5: Standardize proposedDiff, Improve Report & Details Panel
 
 ### What was implemented

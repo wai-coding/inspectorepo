@@ -35,6 +35,7 @@ export default [
         localStorage: 'readonly',
         navigator: 'readonly',
         Blob: 'readonly',
+        process: 'readonly',
       },
     },
     plugins: {
