@@ -1,7 +1,16 @@
-import { resolve } from 'node:path';
-import { writeFileSync, existsSync } from 'node:fs';
+import { resolve, join } from 'node:path';
+import { writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { analyzeCodebase, buildMarkdownReport } from '@inspectorepo/core';
+import {
+  analyzeCodebase,
+  buildMarkdownReport,
+  allRules,
+  parseConfig,
+  mergeConfig,
+  cliRulesToConfig,
+  parseIgnoreFile,
+} from '@inspectorepo/core';
+import type { RuleConfig } from '@inspectorepo/core';
 import { readFilesFromDisk, parseDirs, filterByDirs } from './fs-reader.js';
 import { isAutoFixable, applyFix, formatFixPreview } from './fixer.js';
 
@@ -11,6 +20,7 @@ interface CliOptions {
   format: 'md' | 'json';
   out?: string;
   maxIssues?: number;
+  rules?: string;
 }
 
 function printUsage(): void {
@@ -22,6 +32,7 @@ Commands:
 
 Options (analyze):
   --dirs <dirs>        Comma-separated directories to analyze (e.g. src,lib)
+  --rules <rules>      Comma-separated rules to run (e.g. optional-chaining,unused-imports)
   --format <md|json>   Output format (default: md)
   --out <file>         Write output to file instead of stdout
   --max-issues <n>     Limit number of issues reported
@@ -59,6 +70,9 @@ function parseArgs(args: string[]): CliOptions | null {
     switch (arg) {
       case '--dirs':
         opts.dirs = parseDirs(args[++i] || '');
+        break;
+      case '--rules':
+        opts.rules = args[++i] || '';
         break;
       case '--format':
         {
@@ -197,7 +211,39 @@ export function run(args: string[]): void {
   }
 
   const selectedDirs = opts.dirs.length > 0 ? opts.dirs : [];
-  const report = analyzeCodebase({ files, selectedDirectories: selectedDirs });
+
+  // Build rule config: CLI --rules flag overrides config file
+  let ruleConfig: RuleConfig | undefined;
+  if (opts.rules) {
+    const allRuleIds = allRules.map((r) => r.id);
+    ruleConfig = cliRulesToConfig(opts.rules, allRuleIds);
+  } else {
+    const configPath = join(rootDir, '.inspectorepo.json');
+    if (existsSync(configPath)) {
+      const configJson = readFileSync(configPath, 'utf-8');
+      const parsed = parseConfig(configJson);
+      if (parsed) {
+        ruleConfig = mergeConfig(parsed.rules);
+      }
+    }
+  }
+
+  // Load .inspectorepoignore if present
+  let ignorePatterns: string[] | undefined;
+  const ignorePath = join(rootDir, '.inspectorepoignore');
+  if (existsSync(ignorePath)) {
+    const ignoreContent = readFileSync(ignorePath, 'utf-8');
+    ignorePatterns = parseIgnoreFile(ignoreContent);
+  }
+
+  const report = analyzeCodebase({
+    files,
+    selectedDirectories: selectedDirs,
+    options: {
+      ...(ruleConfig ? { ruleConfig } : {}),
+      ...(ignorePatterns ? { ignorePatterns } : {}),
+    },
+  });
 
   if (opts.maxIssues !== undefined) {
     report.issues = report.issues.slice(0, opts.maxIssues);

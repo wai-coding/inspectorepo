@@ -26,12 +26,7 @@ Manual code review is time-consuming and inconsistent. InspectoRepo provides det
 | `complexity-hotspot` | warn | Flags functions with high cyclomatic-like complexity (≥ 12) and suggests refactoring strategies |
 | `optional-chaining` | info | Detects monotonic guard chains like `a && a.b && a.b.c` and suggests optional chaining (`a?.b?.c`) |
 | `boolean-simplification` | info | Simplifies `x === true`, `x === false`, `!!x`, and `x ? true : false` patterns |
-
-## Planned Rules (Roadmap)
-
-| Rule | Severity | Description |
-|------|----------|-------------|
-| `early-return` | info | Suggest guard clauses to reduce nesting |
+| `early-return` | info | Detects unnecessary block-style early returns and suggests single-line guard clauses |
 
 ## Tech Stack
 
@@ -135,7 +130,7 @@ npx inspectorepo analyze ./my-project --out report.md
 npx inspectorepo analyze ./my-project --dirs src,lib --max-issues 10
 ```
 
-### Auto-Fix
+### CLI Fix
 
 Apply safe code fixes interactively:
 
@@ -149,9 +144,17 @@ Example output:
 
 ```
 optional-chaining suggestion
-File: src/user.ts:12
-Suggested diff:
 
+File: src/user.ts
+Line: 42
+
+Before:
+user && user.profile && user.profile.name
+
+After:
+user?.profile?.name
+
+Suggested diff:
   - user && user.profile && user.profile.name
   + user?.profile?.name
 
@@ -159,6 +162,62 @@ Apply fix? (y/N)
 ```
 
 The CLI uses the same analysis engine as the web UI. Output is deterministic — same input always produces the same report.
+
+## Rules
+
+| Rule | Severity | Description |
+|------|----------|-------------|
+| `unused-imports` | warn | Detects unused import specifiers and suggests removal |
+| `complexity-hotspot` | warn | Flags high-complexity functions (≥ 12) with refactor suggestions |
+| `optional-chaining` | info | Suggests `?.` for monotonic guard chains |
+| `boolean-simplification` | info | Simplifies redundant boolean expressions |
+| `early-return` | info | Detects unnecessary block-style early returns |
+
+## Configuration
+
+Create `.inspectorepo.json` in your project root to configure which rules run and their severity:
+
+```json
+{
+  "rules": {
+    "optional-chaining": "error",
+    "unused-imports": "warn",
+    "complexity-hotspot": "off",
+    "boolean-simplification": "warn",
+    "early-return": "warn"
+  }
+}
+```
+
+Severity levels:
+
+| Level | Behavior |
+|-------|----------|
+| `error` | Run with high severity |
+| `warn` | Run with default severity |
+| `off` | Disabled |
+
+Override from CLI with the `--rules` flag:
+
+```bash
+inspectorepo analyze ./my-project --rules optional-chaining,unused-imports
+```
+
+When `--rules` is provided, only those rules run (config file is ignored).
+
+## Ignore File
+
+Create `.inspectorepoignore` in your project root to exclude files and directories from analysis:
+
+```
+dist
+build
+node_modules
+coverage
+tests
+```
+
+Patterns work like `.gitignore` — each line matches a path segment. The ignore file is automatically respected by the CLI.
 
 ## Interface Preview
 
@@ -184,11 +243,13 @@ See [examples/sample-report.md](./examples/sample-report.md) for a full analysis
 - [x] Rule: `complexity-hotspot` — flag high-complexity functions with refactor suggestions
 - [x] Rule: `optional-chaining` — suggest `?.` for guard chains
 - [x] Rule: `boolean-simplification` — simplify redundant boolean expressions
-- [ ] Rule: `early-return` — suggest guard clauses to reduce nesting (spec defined, stub in place)
+- [x] Rule: `early-return` — detect unnecessary block-style early returns
 - [x] Issue list with severity filters + search
 - [x] Detail panel with proposed patches + copy
 - [x] Markdown report export
 - [x] Scoring (0–100)
+- [x] Rule configuration (`.inspectorepo.json` + CLI `--rules`)
+- [x] Ignore system (`.inspectorepoignore`)
 
 ### V2 (planned)
 
