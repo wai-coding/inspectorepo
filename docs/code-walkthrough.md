@@ -299,8 +299,57 @@ Center panel. Shows:
 
 ### `src/components/DetailsPanel.tsx`
 
-Right panel showing selected issue details. Uses a tabbed layout with **Suggestion** and **Diff** tabs (via `useState<DetailTab>`). The Suggestion tab shows the summary and details; the Diff tab shows the proposed fix in a `<pre>` block with a Copy button. Prefers `proposedDiff` over `proposedPatch`. The Diff tab only appears when a diff is available.
+Right panel showing selected issue details. Uses a tabbed layout with **Suggestion** and **Diff** tabs (via `useState<DetailTab>`). The Suggestion tab shows the summary, details, and a **Copy Suggested Fix** button. The Diff tab shows the proposed fix in a `<pre>` block with a **Copy Diff** button. Prefers `proposedDiff` over `proposedPatch`. The Diff tab only appears when a diff is available.
 
 ### `src/styles/global.css`
 
-Dark theme with CSS custom properties. Styles for: layout, top bar (summary badge), issue toolbar (filter buttons, search), issue list rows, detail panel tabs (`.detail-tabs`, `.detail-tab`, `.detail-tab.active` with accent underline), detail panel sections, proposed patch code block.
+Dark theme with CSS custom properties. Styles for: layout, top bar (summary badge), issue toolbar (filter buttons, search), issue list rows, detail panel tabs (`.detail-tabs`, `.detail-tab`, `.detail-tab.active` with accent underline), detail panel sections, proposed patch code block, `.detail-actions` for copy buttons.
+
+---
+
+## Repomix Workflow
+
+### How milestone versioning works
+
+The version counter lives in `ai/repomix-state.json` (tracked in git). Each `npm run repopack` run increments it. The generated exports live in `ai/exports/` which is git-ignored — they are never committed. After each milestone merge, run `npm run repopack` and upload the outputs to ChatGPT for review.
+
+### Full vs Core repo pack
+
+The repomix script generates two pack files:
+
+- **`repo-pack-full-vN.md`** — excludes only noise: `node_modules`, `dist`, `build`, `.git`, `.next`, `coverage`, `.turbo`, `.cache`, `ai/exports`, `examples`, `screenshots/*.webm`
+- **`repo-pack-core-vN.md`** — also excludes `screenshots`, `docs`, `.github` for a smaller context window focused on source code
+
+### New summary structure
+
+`changes-summary-vN.md` includes:
+- **PR** — auto-detected link from the latest merged PR (via `gh`)
+- **Human Summary** — 4–6 bullet points describing the milestone
+- **Changes** — last 10 commits
+- **Files Changed** — `git diff --name-only`
+- **Known Limitations** — current tool limitations
+- **Next Milestone** — planned features
+- **Regenerate** — instructions to regenerate
+
+### Why repomix exports are ignored
+
+The repo pack files are large (thousands of lines) and change every run. Committing them would bloat the repository. Instead, they are generated on-demand and uploaded to external AI tools for review.
+
+---
+
+## Auto-Fix CLI
+
+### `packages/cli/src/fixer.ts`
+
+The fixer module provides safe auto-fix capabilities:
+- `isAutoFixable(issue)` — checks if an issue's rule is in the safe allowlist (`optional-chaining`, `boolean-simplification`, `unused-imports`) and has a `proposedDiff`
+- `parseDiff(diff)` — parses `- old\n+ new` format into `{ oldText, newText }`, where `newText` is null for removal-only diffs
+- `applyFix(rootDir, issue)` — reads the file, finds the old text via `indexOf`, replaces it, writes back
+- `formatFixPreview(issue)` — formats a human-readable preview for terminal display
+
+### `packages/cli/src/fixer.test.ts`
+
+10 tests covering `isAutoFixable` and `parseDiff` functions:
+- Auto-fixable: optional-chaining, boolean-simplification, unused-imports (all true with diff)
+- Not auto-fixable: complexity-hotspot (always false), missing diff (false)
+- Parse: optional chaining diff, boolean diff, removal-only diff, partial import fix, empty/invalid diff

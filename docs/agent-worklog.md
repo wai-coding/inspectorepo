@@ -122,6 +122,42 @@ cat examples/sample-report.md
 
 ---
 
+## 2026-03-06 — M7: Safe Auto-Fix CLI + Repomix Workflow Improvements
+
+### What was implemented
+
+- **Repomix workflow improvements** (`ai/scripts/generate-repomix-exports.ts`) — enhanced the changes-summary to include PR link (auto-detected from latest merged PR via `gh`), human summary bullets, known limitations, next milestone, and files changed sections. Added two pack modes: `repo-pack-full-vN.md` (base exclusions) and `repo-pack-core-vN.md` (also excludes docs, screenshots, .github).
+- **Safe auto-fix CLI** (`packages/cli/src/fixer.ts`) — new `inspectorepo fix <path>` command that runs analysis, collects issues with safe `proposedDiff`, shows terminal preview, asks confirmation per fix, then patches files. Only applies fixes for `optional-chaining`, `boolean-simplification`, and `unused-imports` rules. Never auto-fixes `complexity-hotspot`.
+- **Fixer tests** (`packages/cli/src/fixer.test.ts`) — 10 tests covering `isAutoFixable` (5 tests: each safe rule + rejection of complexity-hotspot + missing diff) and `parseDiff` (5 tests: optional chaining, boolean simplification, unused import removal, partial import, empty diff).
+- **UI copy buttons** — DetailsPanel now has "Copy Suggested Fix" button on the Suggestion tab and "Copy Diff" button on the Diff tab (renamed from "Copy").
+- **Updated CLI** — `parseArgs` now accepts both `analyze` and `fix` commands. Updated usage text to show both commands.
+
+### Why
+
+M7 brings the auto-fix preview feature — the first step toward automated code improvement. The repomix workflow improvements make milestone summaries more useful for external review.
+
+### How to verify
+
+```bash
+npm run lint        # zero errors
+npm run typecheck   # zero errors
+npm run build       # all packages build
+npm test            # all tests pass
+
+# Test auto-fix against fixture repo
+node packages/cli/dist/index.js fix examples/fixture-repo
+```
+
+### Design decisions
+
+- **Interactive confirmation** — each fix requires explicit user confirmation to prevent accidental changes.
+- **Safe rule allowlist** — only 3 rules are auto-fixable; `complexity-hotspot` is advisory only and never auto-applied.
+- **Line-based replacement** — uses `String.indexOf` for safe text matching rather than regex, preventing regex injection.
+- **Two pack modes** — core mode helps keep context smaller when only source code review is needed.
+- **PR auto-detection** — uses `gh pr list` to find the latest merged PR; falls back to generic links if `gh` is unavailable.
+
+---
+
 ## 2026-03-05 — Screenshots, Demo Video, Sample Report & Fixture Repo
 
 ### What was implemented
