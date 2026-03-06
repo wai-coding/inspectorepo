@@ -1,4 +1,10 @@
-import type { AnalysisReport } from '@inspectorepo/shared';
+import type { AnalysisReport, Severity } from '@inspectorepo/shared';
+
+const SEVERITY_EMOJI: Record<Severity, string> = {
+  error: '🔴',
+  warn: '🟡',
+  info: '🔵',
+};
 
 export function buildMarkdownReport(report: AnalysisReport): string {
   const lines: string[] = [];
@@ -18,9 +24,9 @@ export function buildMarkdownReport(report: AnalysisReport): string {
   lines.push('|---|---|');
   lines.push(`| Score | **${report.summary.score}/100** |`);
   lines.push(`| Total issues | ${report.summary.totalIssues} |`);
-  lines.push(`| Errors | ${report.summary.bySeverity.error} |`);
-  lines.push(`| Warnings | ${report.summary.bySeverity.warn} |`);
-  lines.push(`| Info | ${report.summary.bySeverity.info} |`);
+  lines.push(`| ${SEVERITY_EMOJI.error} Errors | ${report.summary.bySeverity.error} |`);
+  lines.push(`| ${SEVERITY_EMOJI.warn} Warnings | ${report.summary.bySeverity.warn} |`);
+  lines.push(`| ${SEVERITY_EMOJI.info} Info | ${report.summary.bySeverity.info} |`);
   lines.push('');
 
   if (report.issues.length === 0) {
@@ -31,11 +37,12 @@ export function buildMarkdownReport(report: AnalysisReport): string {
   // Issues table
   lines.push('## Issues');
   lines.push('');
-  lines.push('| Severity | Rule | File | Line |');
-  lines.push('|---|---|---|---|');
+  lines.push('| | Severity | Rule | File | Line |');
+  lines.push('|---|---|---|---|---|');
   for (const issue of report.issues) {
+    const emoji = SEVERITY_EMOJI[issue.severity];
     lines.push(
-      `| ${issue.severity} | ${issue.ruleId} | ${issue.filePath} | ${issue.range.start.line} |`,
+      `| ${emoji} | ${issue.severity} | ${issue.ruleId} | ${issue.filePath} | ${issue.range.start.line} |`,
     );
   }
   lines.push('');
@@ -54,26 +61,34 @@ export function buildMarkdownReport(report: AnalysisReport): string {
   for (const [filePath, issues] of byFile) {
     lines.push(`### ${filePath}`);
     lines.push('');
-    for (const issue of issues) {
+    for (let i = 0; i < issues.length; i++) {
+      const issue = issues[i];
+      const emoji = SEVERITY_EMOJI[issue.severity];
+
       lines.push(
-        `**${issue.severity.toUpperCase()}** — ${issue.ruleId} (line ${issue.range.start.line})`,
+        `${emoji} **${issue.severity.toUpperCase()}** — \`${issue.ruleId}\` (line ${issue.range.start.line})`,
       );
       lines.push('');
       lines.push(issue.message);
       lines.push('');
       if (issue.suggestion.summary) {
-        lines.push(`> ${issue.suggestion.summary}`);
+        lines.push(`> 💡 ${issue.suggestion.summary}`);
         lines.push('');
       }
-      if (issue.suggestion.proposedPatch) {
+      const diff = issue.suggestion.proposedDiff ?? issue.suggestion.proposedPatch;
+      if (diff) {
+        lines.push('<details>');
+        lines.push('<summary>Proposed fix</summary>');
+        lines.push('');
         lines.push('```diff');
-        lines.push(issue.suggestion.proposedPatch);
+        lines.push(diff);
         lines.push('```');
         lines.push('');
-      } else if (issue.suggestion.proposedDiff) {
-        lines.push('```diff');
-        lines.push(issue.suggestion.proposedDiff);
-        lines.push('```');
+        lines.push('</details>');
+        lines.push('');
+      }
+      if (i < issues.length - 1) {
+        lines.push('---');
         lines.push('');
       }
     }

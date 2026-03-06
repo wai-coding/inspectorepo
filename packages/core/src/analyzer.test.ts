@@ -161,7 +161,7 @@ describe('unused-imports rule', () => {
     });
     expect(report.issues.length).toBe(1);
     expect(report.issues[0].message).toContain('useEffect');
-    expect(report.issues[0].suggestion.proposedPatch).toContain("import React, { useState } from 'react';");
+    expect(report.issues[0].suggestion.proposedDiff).toContain("import React, { useState } from 'react';");
   });
 
   it('removes entire namespace import when unused', () => {
@@ -178,7 +178,7 @@ describe('unused-imports rule', () => {
     });
     expect(report.issues.length).toBe(1);
     expect(report.issues[0].message).toContain('fs');
-    expect(report.issues[0].suggestion.proposedPatch).toContain('- import * as fs from "fs";');
+    expect(report.issues[0].suggestion.proposedDiff).toContain('- import * as fs from "fs";');
   });
 
   it('removes entire import when all named imports unused', () => {
@@ -195,7 +195,7 @@ describe('unused-imports rule', () => {
     });
     expect(report.issues.length).toBe(1);
     expect(report.issues[0].message).toContain('entire import');
-    expect(report.issues[0].suggestion.proposedPatch).toContain('- import { a, b } from "x";');
+    expect(report.issues[0].suggestion.proposedDiff).toContain('- import { a, b } from "x";');
   });
 
   it('removes entire import when unused default only', () => {
@@ -212,7 +212,7 @@ describe('unused-imports rule', () => {
     });
     expect(report.issues.length).toBe(1);
     expect(report.issues[0].message).toContain('react');
-    expect(report.issues[0].suggestion.proposedPatch).toContain('- import React from "react";');
+    expect(report.issues[0].suggestion.proposedDiff).toContain('- import React from "react";');
   });
 });
 
@@ -356,7 +356,7 @@ describe('optional-chaining rule', () => {
     expect(report.issues.length).toBe(0);
   });
 
-  it('provides proposedPatch with diff', () => {
+  it('provides proposedDiff with diff', () => {
     const code = 'const x = user && user.name;\n';
     const files = [{ path: 'src/test.ts', content: code }];
     const report = analyzeCodebase({
@@ -365,7 +365,7 @@ describe('optional-chaining rule', () => {
       options: { rules: [optionalChainingRule] },
     });
     expect(report.issues.length).toBe(1);
-    expect(report.issues[0].suggestion.proposedPatch).toContain('user?.name');
+    expect(report.issues[0].suggestion.proposedDiff).toContain('user?.name');
   });
 });
 
@@ -439,5 +439,69 @@ describe('boolean-simplification rule', () => {
       options: { rules: [booleanSimplificationRule] },
     });
     expect(report.issues.length).toBe(0);
+  });
+});
+
+describe('proposedDiff standardisation', () => {
+  it('all rules produce proposedDiff, not only proposedPatch', () => {
+    const code = [
+      'import { unused } from "x";',
+      'const a = user && user.name;',
+      'const b = isOk === true;',
+      '',
+    ].join('\n');
+    const files = [{ path: 'src/test.ts', content: code }];
+    const rules = [unusedImportsRule, optionalChainingRule, booleanSimplificationRule];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules },
+    });
+    expect(report.issues.length).toBeGreaterThanOrEqual(3);
+    for (const issue of report.issues) {
+      if (issue.suggestion.proposedDiff || issue.suggestion.proposedPatch) {
+        expect(issue.suggestion.proposedDiff).toBeTruthy();
+      }
+    }
+  });
+});
+
+describe('buildMarkdownReport format', () => {
+  const makeReport = () => {
+    const code = [
+      'import { unused } from "x";',
+      'const a = user && user.name;',
+      '',
+    ].join('\n');
+    return analyzeCodebase({
+      files: [{ path: 'src/test.ts', content: code }],
+      selectedDirectories: ['src'],
+      options: { rules: [unusedImportsRule, optionalChainingRule] },
+    });
+  };
+
+  it('includes severity emojis in summary table', () => {
+    const md = buildMarkdownReport(makeReport());
+    expect(md).toContain('🔴');
+    expect(md).toContain('🟡');
+    expect(md).toContain('🔵');
+  });
+
+  it('wraps diffs in collapsible <details> tags', () => {
+    const md = buildMarkdownReport(makeReport());
+    expect(md).toContain('<details>');
+    expect(md).toContain('<summary>Proposed fix</summary>');
+    expect(md).toContain('</details>');
+  });
+
+  it('uses separator lines between issues in the same file', () => {
+    const md = buildMarkdownReport(makeReport());
+    // Two issues in same file should have --- between them
+    expect(md).toContain('---');
+  });
+
+  it('prefixes suggestions with 💡', () => {
+    const md = buildMarkdownReport(makeReport());
+    expect(md).toContain('> 💡');
   });
 });

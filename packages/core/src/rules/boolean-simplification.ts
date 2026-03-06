@@ -70,7 +70,7 @@ export const booleanSimplificationRule: Rule = {
             suggestion: {
               summary: suggestion,
               details: 'Comparing to boolean literals is redundant when the value is already boolean.',
-              proposedPatch: [
+              proposedDiff: [
                 `- ${node.getText()}`,
                 `+ ${simplifiedText}`,
               ].join('\n'),
@@ -108,7 +108,7 @@ export const booleanSimplificationRule: Rule = {
           suggestion: {
             summary: `Replace \`!!${innerText}\` with \`Boolean(${innerText})\` for clarity.`,
             details: 'Double negation coerces to boolean but `Boolean()` is more explicit.',
-            proposedPatch: [
+            proposedDiff: [
               `- !!${innerText}`,
               `+ Boolean(${innerText})`,
             ].join('\n'),
@@ -151,7 +151,7 @@ export const booleanSimplificationRule: Rule = {
             suggestion: {
               summary: `Simplify ternary to \`${simplified}\`.`,
               details: 'A ternary that returns boolean literals can be replaced by the condition itself.',
-              proposedPatch: [
+              proposedDiff: [
                 `- ${node.getText()}`,
                 `+ ${simplified}`,
               ].join('\n'),

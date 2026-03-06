@@ -139,7 +139,7 @@ interface Rule { id: string; title: string; severity: Severity; run(ctx: RuleCon
 
 ### `src/report.ts`
 
-`buildMarkdownReport(report)` — produces full markdown with header, summary table, issues table, and per-file detail sections with proposed patches.
+`buildMarkdownReport(report)` — produces full markdown with header, summary table (with severity emojis 🔴🟡🔵), issues table (emoji column), and per-file detail sections. Each issue shows `emoji **SEVERITY** — \`ruleId\` (line N)`, a `> 💡` suggestion prefix, and collapsible `<details>` blocks for proposed diffs. Issues in the same file are separated by `---` horizontal rules. Prefers `proposedDiff` over `proposedPatch`.
 
 ### `src/scanner.ts`
 
@@ -248,8 +248,8 @@ Center panel. Shows:
 
 ### `src/components/DetailsPanel.tsx`
 
-Right panel showing selected issue details: severity badge, rule id, file location, message, suggestion summary/details, and proposed patch with copy button.
+Right panel showing selected issue details. Uses a tabbed layout with **Suggestion** and **Diff** tabs (via `useState<DetailTab>`). The Suggestion tab shows the summary and details; the Diff tab shows the proposed fix in a `<pre>` block with a Copy button. Prefers `proposedDiff` over `proposedPatch`. The Diff tab only appears when a diff is available.
 
 ### `src/styles/global.css`
 
-Dark theme with CSS custom properties. Styles for: layout, top bar (summary badge), issue toolbar (filter buttons, search), issue list rows, detail panel sections, proposed patch code block.
+Dark theme with CSS custom properties. Styles for: layout, top bar (summary badge), issue toolbar (filter buttons, search), issue list rows, detail panel tabs (`.detail-tabs`, `.detail-tab`, `.detail-tab.active` with accent underline), detail panel sections, proposed patch code block.
