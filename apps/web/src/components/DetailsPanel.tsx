@@ -1,10 +1,15 @@
+import { useState } from 'react';
 import type { Issue } from '@inspectorepo/shared';
+
+type DetailTab = 'suggestion' | 'diff';
 
 interface DetailsPanelProps {
   issue: Issue | null;
 }
 
 export function DetailsPanel({ issue }: DetailsPanelProps) {
+  const [activeTab, setActiveTab] = useState<DetailTab>('suggestion');
+
   if (!issue) {
     return (
       <aside className="details-panel">
@@ -15,6 +20,9 @@ export function DetailsPanel({ issue }: DetailsPanelProps) {
       </aside>
     );
   }
+
+  const diff = issue.suggestion.proposedDiff ?? issue.suggestion.proposedPatch;
+  const hasDiff = !!diff;
 
   const copyText = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -35,27 +43,45 @@ export function DetailsPanel({ issue }: DetailsPanelProps) {
         </div>
         <p className="detail-message">{issue.message}</p>
 
-        <div className="detail-section">
-          <h3>Suggestion</h3>
-          <p className="detail-summary">{issue.suggestion.summary}</p>
-          {issue.suggestion.details && (
-            <p className="detail-details">{issue.suggestion.details}</p>
+        <div className="detail-tabs">
+          <button
+            className={`detail-tab ${activeTab === 'suggestion' ? 'active' : ''}`}
+            onClick={() => setActiveTab('suggestion')}
+          >
+            Suggestion
+          </button>
+          {hasDiff && (
+            <button
+              className={`detail-tab ${activeTab === 'diff' ? 'active' : ''}`}
+              onClick={() => setActiveTab('diff')}
+            >
+              Diff
+            </button>
           )}
         </div>
 
-        {(issue.suggestion.proposedPatch || issue.suggestion.proposedDiff) && (
+        {activeTab === 'suggestion' && (
+          <div className="detail-section">
+            <p className="detail-summary">{issue.suggestion.summary}</p>
+            {issue.suggestion.details && (
+              <p className="detail-details">{issue.suggestion.details}</p>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'diff' && hasDiff && (
           <div className="detail-section">
             <div className="detail-patch-header">
               <h3>Proposed Fix</h3>
               <button
                 className="btn btn-secondary btn-sm"
-                onClick={() => copyText(issue.suggestion.proposedPatch || issue.suggestion.proposedDiff || '')}
+                onClick={() => copyText(diff)}
               >
                 Copy
               </button>
             </div>
             <pre className="detail-patch">
-              {issue.suggestion.proposedPatch || issue.suggestion.proposedDiff}
+              {diff}
             </pre>
           </div>
         )}

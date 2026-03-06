@@ -4,6 +4,44 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-06 — M5: Standardize proposedDiff, Improve Report & Details Panel
+
+### What was implemented
+
+- **Standardized `proposedDiff`** — all rules (`unused-imports`, `optional-chaining`, `boolean-simplification`) now produce `proposedDiff` instead of `proposedPatch`. Report and DetailsPanel prefer `proposedDiff` with fallback to `proposedPatch`.
+- **Improved Markdown report format** — severity emojis (🔴🟡🔵) in summary and issues tables, `> 💡` suggestion prefix, collapsible `<details><summary>Proposed fix</summary>` blocks for diffs, `---` separators between issues in the same file.
+- **DetailsPanel tabs** — replaced single-view layout with tabbed UI (`Suggestion` / `Diff`). `useState<DetailTab>` tracks active tab. Diff tab only appears when a diff is available. Copy button on the diff tab.
+- **Tab CSS** — `.detail-tabs` flex row, `.detail-tab` with accent-colored underline on `.active`.
+- **5 new tests** — `proposedDiff` standardisation test (all rules produce `proposedDiff`), 4 report format tests (severity emojis, collapsible details, separator lines, 💡 prefix).
+- **Regenerated sample-report.md** — now reflects the new emoji/collapsible format.
+- **Updated docs** — code-walkthrough for report.ts, DetailsPanel, CSS changes.
+
+### Why
+
+Consolidate the diff field naming (`proposedDiff` as the standard), make the Markdown export more visually appealing for recruiter review, and improve the UI detail panel with a clean tabbed layout.
+
+### How to verify
+
+```bash
+npm run lint        # zero errors
+npm run typecheck   # zero errors
+npm run build       # all packages build
+npm test            # 56 tests pass
+
+# Regenerate sample report to see new format
+npx tsx examples/generate-report.ts
+cat examples/sample-report.md
+```
+
+### Design decisions
+
+- **`proposedDiff` over `proposedPatch`** — "diff" better describes the unified-diff format we produce. Kept `proposedPatch` fallback for backwards compatibility.
+- **Collapsible details** — long diffs would clutter the report; `<details>` keeps it clean on GitHub.
+- **Tabs over stacked sections** — reduces visual noise; most users want either the suggestion or the diff, not both simultaneously.
+- **Copy button on diff tab only** — the suggestion is prose (no need to copy); the diff is code (often pasted into editors).
+
+---
+
 ## 2026-03-05 — Screenshots, Demo Video, Sample Report & Fixture Repo
 
 ### What was implemented

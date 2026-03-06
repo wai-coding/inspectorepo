@@ -85,10 +85,10 @@ export const unusedImportsRule: Rule = {
       const moduleSpecifier = importDecl.getModuleSpecifierValue();
       const removeAll = unusedSpecifiers.length === totalSpecifiers.length;
 
-      let proposedPatch: string | undefined;
+      let proposedDiff: string | undefined;
 
       if (removeAll) {
-        proposedPatch = `- ${importDecl.getText()}`;
+        proposedDiff = `- ${importDecl.getText()}`;
       } else {
         // Build the replacement import preserving structure
         const keptDefault = hasDefault && !defaultUnused ? defaultName : null;
@@ -102,24 +102,24 @@ export const unusedImportsRule: Rule = {
           (keptNamespace && keptNamed.length > 0);
 
         if (isComplex) {
-          proposedPatch = undefined; // omit — text suggestion only
+          proposedDiff = undefined; // omit — text suggestion only
         } else if (keptNamespace) {
-          proposedPatch = [
+          proposedDiff = [
             `- ${importDecl.getText()}`,
             `+ import ${keptNamespace} from '${moduleSpecifier}';`,
           ].join('\n');
         } else if (keptDefault && keptNamed.length > 0) {
-          proposedPatch = [
+          proposedDiff = [
             `- ${importDecl.getText()}`,
             `+ import ${keptDefault}, { ${keptNamed.join(', ')} } from '${moduleSpecifier}';`,
           ].join('\n');
         } else if (keptDefault) {
-          proposedPatch = [
+          proposedDiff = [
             `- ${importDecl.getText()}`,
             `+ import ${keptDefault} from '${moduleSpecifier}';`,
           ].join('\n');
         } else if (keptNamed.length > 0) {
-          proposedPatch = [
+          proposedDiff = [
             `- ${importDecl.getText()}`,
             `+ import { ${keptNamed.join(', ')} } from '${moduleSpecifier}';`,
           ].join('\n');
@@ -134,8 +134,8 @@ export const unusedImportsRule: Rule = {
           ? 'This import is not referenced anywhere in the file.'
           : `Only ${totalSpecifiers.filter((s) => !unusedSpecifiers.includes(s)).join(', ')} are used.`,
       };
-      if (proposedPatch) {
-        suggestion.proposedPatch = proposedPatch;
+      if (proposedDiff) {
+        suggestion.proposedDiff = proposedDiff;
       }
 
       issues.push({

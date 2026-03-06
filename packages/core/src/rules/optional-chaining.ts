@@ -133,7 +133,7 @@ export const optionalChainingRule: Rule = {
         suggestion: {
           summary: `Replace with optional chaining: \`${suggested}\``,
           details: `The expression \`${originalText}\` is a monotonic guard chain that can be simplified.`,
-          proposedPatch: [
+          proposedDiff: [
             `- ${originalText}`,
             `+ ${suggested}`,
           ].join('\n'),
