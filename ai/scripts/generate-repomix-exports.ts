@@ -159,13 +159,5 @@ console.log(`\nDone! v${nextVersion} exports written to ai/exports/`);
 console.log(`  - repo-pack-full-v${nextVersion}.md`);
 console.log(`  - repo-pack-core-v${nextVersion}.md`);
 console.log(`  - changes-summary-v${nextVersion}.md`);
-
-// Update state file
-state.currentVersion = nextVersion;
-writeFileSync(STATE_PATH, JSON.stringify(state, null, 2) + '\n', 'utf-8');
-
-console.log(`\nDone! Generated:`);
-console.log(`  ${repomixOutput}`);
-console.log(`  ${summaryPath}`);
 console.log(`\nVersion updated to v${nextVersion} in ai/repomix-state.json`);
 console.log(`\nReminder: Do NOT commit the files under ai/exports/.`);
