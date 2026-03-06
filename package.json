@@ -14,7 +14,8 @@
     "typecheck": "tsc -b",
     "build": "npm --ws run build --if-present",
     "test": "vitest run",
-    "dev": "npm run dev --workspace=apps/web"
+    "dev": "npm run dev --workspace=apps/web",
+    "repopack": "tsx ai/scripts/generate-repomix-exports.ts"
   },
   "engines": {
     "node": ">=20.0.0"

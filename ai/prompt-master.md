@@ -61,6 +61,20 @@ git push --force-with-lease origin dev
 - **If `gh` is not authenticated** → instruct to run `gh auth login` and document in worklog
 - **If branch protection prevents merge** → document the issue in `docs/agent-worklog.md` and stop after PR creation (do not force merge)
 
+## Post-Merge Repomix Export
+
+After every PR merge into main (end of milestone):
+
+1. Sync local `main`: `git fetch origin && git checkout main && git pull`
+2. Run: `npm run repopack`
+3. Confirm the two files exist under `ai/exports/`:
+   - `ai/exports/repo-pack-vN.md`
+   - `ai/exports/changes-summary-vN.md`
+4. **STOP** — do NOT commit the exports (they are git-ignored)
+5. Tell the user to upload `repo-pack-vN.md` + `changes-summary-vN.md` to ChatGPT for full review
+
+The version counter lives in `ai/repomix-state.json` (tracked). The exports live in `ai/exports/` (ignored).
+
 ## Human Code Style
 
 Write code that looks human:

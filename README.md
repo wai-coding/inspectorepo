@@ -56,7 +56,7 @@ inspectorepo/
 │   ├── fixture-repo/     # Sample TS files for testing all rules
 │   └── sample-report.md  # Generated analysis report
 ├── screenshots/          # UI screenshots & Playwright automation
-├── ai/                   # AI agent instructions & project context
+├── ai/                   # AI agent instructions, project context & repomix exports
 ├── docs/                 # Architecture, worklog, code walkthrough
 └── package.json          # Root workspace config
 ```
@@ -88,6 +88,7 @@ npm test
 | `npm run format`      | Format with Prettier         |
 | `npm run format:check`| Check formatting             |
 | `npm test`            | Run Vitest tests             |
+| `npm run repopack`   | Generate repomix exports     |
 
 ## Demo
 
