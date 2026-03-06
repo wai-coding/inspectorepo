@@ -1,13 +1,14 @@
-# Architecture & Rules — M3
+# Architecture & Rules
 
-## Core architecture review (M3)
+## Core architecture review
 
 ### Package layout
 
 ```
 packages/core/src/
 ├── index.ts              # Public API: analyzeCodebase, buildMarkdownReport, re-exports
-├── types.ts              # Local type aliases (re-exports from shared where useful)
+├── config.ts             # Rule configuration loader (.inspectorepo.json)
+├── ignore.ts             # Ignore file loader (.inspectorepoignore)
 ├── scanner.ts            # isAnalyzableFile, filterAnalyzableFiles
 ├── file-filter.ts        # Exclude rules, directory tree, path filtering
 ├── analyzer.ts           # analyzeCodebase() — main pipeline entry point
@@ -18,9 +19,9 @@ packages/core/src/
     ├── index.ts           # Registry: allRules array
     ├── unused-imports.ts
     ├── complexity-hotspot.ts
-    ├── optional-chaining.ts   (stub in M3)
-    ├── boolean-simplification.ts (stub in M3)
-    └── early-return.ts        (stub in M3)
+    ├── optional-chaining.ts
+    ├── boolean-simplification.ts
+    └── early-return.ts
 ```
 
 ### Key decisions
@@ -107,11 +108,11 @@ Base 100, subtract per-issue penalties (error: −10, warn: −5, info: −2), f
 |---|---|
 | **Rule id** | `early-return` |
 | **Severity** | `info` |
-| **What it detects** | Functions where the entire body is wrapped in a single `if` block (or ends with an `else` that could be an early return), causing unnecessary nesting. |
-| **Examples** | `function foo(x) { if (x) { /* 20 lines */ } }` → `function foo(x) { if (!x) return; /* 20 lines */ }` |
-| **Safety constraints** | Do NOT suggest when the function has a meaningful return value in the else path. Do NOT suggest when the if-block is short (≤ 3 statements). Only target functions, not arbitrary blocks. |
-| **Suggested fix format** | Text explanation + snippet showing the inverted guard clause and flattened body. |
-| **Implementation approach** | AST: find `FunctionDeclaration` / `ArrowFunction` / `MethodDeclaration` whose body has exactly one statement that is an `IfStatement` with no else, or whose last statement is `if/else` with a simple return in one branch. |
+| **What it detects** | Unnecessary block-style early returns: `if (cond) { return; }` where the block has exactly one `ReturnStatement` with no argument. |
+| **Examples** | `if (!user) { return; }` → `if (!user) return;` |
+| **Safety constraints** | Only suggests when: block has exactly one statement, that statement is `return;` (no argument), no comments inside the block, no else branch. |
+| **Suggested fix format** | Text explanation + `proposedDiff` showing the simplified single-line form. |
+| **Implementation approach** | AST: find `IfStatement` with no else, where consequent is a `Block` containing exactly one `ReturnStatement` with no argument. Check for comments via text search. |
 
 ### 5. `complexity-hotspot`
 
@@ -124,3 +125,49 @@ Base 100, subtract per-issue penalties (error: −10, warn: −5, info: −2), f
 | **Safety constraints** | This is advisory only. Do NOT suggest auto-refactoring of complex functions — only suggest strategies (extract helper, early returns, split component). Do NOT flag short functions even if they have a few branches. Minimum threshold: 12. |
 | **Suggested fix format** | Text summary: "This function has a complexity score of {n}. Consider: extracting helpers, using early returns, splitting into smaller components." No diff. |
 | **Implementation approach** | AST: walk each function/method/arrow body, count control-flow nodes, add nesting bonus (+1 per nesting level for nested if/loop). Sum to a score. Flag if ≥ threshold. |
+
+---
+
+## Rule configuration system
+
+Rules can be configured via `.inspectorepo.json` in the project root:
+
+```json
+{
+  "rules": {
+    "optional-chaining": "error",
+    "unused-imports": "warn",
+    "complexity-hotspot": "off"
+  }
+}
+```
+
+- `error` — run the rule, override severity to `error`
+- `warn` — run the rule with default severity
+- `off` — disable the rule
+
+The CLI also supports a `--rules` flag that overrides the config file:
+
+```bash
+inspectorepo analyze ./project --rules optional-chaining,unused-imports
+```
+
+Implementation: `config.ts` provides `parseConfig()`, `mergeConfig()`, `filterRulesByConfig()`, and `cliRulesToConfig()`. The analyzer accepts an optional `ruleConfig` in its input to filter rules before execution.
+
+---
+
+## Ignore system
+
+Files and directories can be excluded via `.inspectorepoignore` in the project root:
+
+```
+dist
+build
+node_modules
+coverage
+tests
+```
+
+Each line matches as a path segment (like `.gitignore`). Wildcard patterns (`*.test.ts`) match filenames.
+
+Implementation: `ignore.ts` provides `parseIgnoreFile()`, `isIgnored()`, and `filterIgnoredPaths()`. The analyzer accepts optional `ignorePatterns` and filters paths after the standard exclude step.

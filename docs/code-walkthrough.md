@@ -210,11 +210,28 @@ Detects three redundant boolean patterns:
 
 ### `src/rules/early-return.ts`
 
-Stub rule returning empty arrays. Spec defined in `docs/architecture-and-rules.md`.
+Detects unnecessary block-style early returns. Looks for `IfStatement` nodes where:
+- There is no `else` branch
+- The consequent is a `Block` with exactly one statement
+- That statement is a `ReturnStatement` with no argument
+- No comments exist inside the block
 
-### `src/rules/placeholder.ts`
+Suggests collapsing `if (cond) { return; }` into `if (cond) return;`. Produces a `proposedDiff` showing the simplified form.
 
-Legacy no-op rule. Kept for backward compatibility.
+### `src/config.ts`
+
+Rule configuration loader:
+- `parseConfig(json)` — parses `.inspectorepo.json` content, returns `InspectorepoConfig` or null
+- `mergeConfig(loaded)` — merges loaded config with defaults (all rules default to `warn`)
+- `filterRulesByConfig(rules, config)` — filters and optionally overrides severity based on config
+- `cliRulesToConfig(cliRules, allRuleIds)` — converts `--rules` CLI flag value into a config object
+
+### `src/ignore.ts`
+
+Ignore file loader with simple gitignore-like matching:
+- `parseIgnoreFile(content)` — strips comments/blanks, returns pattern array
+- `isIgnored(filePath, patterns)` — matches path segments or `*.ext` wildcards
+- `filterIgnoredPaths(filePaths, patterns)` — removes matching paths
 
 ### `src/analyzer.test.ts`
 
@@ -345,7 +362,7 @@ The fixer module provides safe auto-fix capabilities:
 - `isAutoFixable(issue)` — checks if an issue's rule is in the safe allowlist (`optional-chaining`, `boolean-simplification`, `unused-imports`) and has a `proposedDiff`
 - `parseDiff(diff)` — parses `- old\n+ new` format into `{ oldText, newText }`, where `newText` is null for removal-only diffs
 - `applyFix(rootDir, issue)` — reads the file, finds the old text via `indexOf`, replaces it, writes back
-- `formatFixPreview(issue)` — formats a human-readable preview for terminal display
+- `formatFixPreview(issue)` — formats a human-readable preview for terminal display showing file, line, before/after code, and suggested diff
 
 ### `packages/cli/src/fixer.test.ts`
 

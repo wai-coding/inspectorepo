@@ -4,6 +4,41 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-06 — M8/M9/M10: Early Return, Rule Config, Ignore System
+
+### What was implemented
+
+- **Removed placeholder rule** (`packages/core/src/rules/placeholder.ts`) — deleted unused stub rule file. No imports referenced it.
+- **Improved CLI fix preview** (`packages/cli/src/fixer.ts`) — `formatFixPreview()` now shows file path, line number, before/after code blocks, and suggested diff in a clear format.
+- **Early-return rule** (`packages/core/src/rules/early-return.ts`) — M8: detects unnecessary block-style early returns (`if (cond) { return; }`) and suggests single-line form (`if (cond) return;`). Safety: only triggers when block has exactly one `ReturnStatement` with no argument, no comments inside, and no else branch. 5 tests.
+- **Rule configuration system** (`packages/core/src/config.ts`) — M9: supports `.inspectorepo.json` config file with `error`/`warn`/`off` severity levels per rule. CLI `--rules` flag overrides config file. Functions: `parseConfig()`, `mergeConfig()`, `filterRulesByConfig()`, `cliRulesToConfig()`. 7 tests.
+- **Ignore system** (`packages/core/src/ignore.ts`) — M10: supports `.inspectorepoignore` file with gitignore-like pattern matching. Patterns match path segments or `*.ext` wildcards. Integrated into analyzer pipeline and CLI. 9 tests.
+- **CLI `--rules` flag** — `inspectorepo analyze ./project --rules optional-chaining,unused-imports` runs only specified rules.
+- **README** — added Rules, Configuration, Ignore File, CLI Fix sections. Updated roadmap and implemented rules table.
+- **Docs** — updated architecture-and-rules.md, code-walkthrough.md with new features.
+
+### Why
+
+M8–M10 add essential developer experience features: the early-return rule completes the V1 rule set, the config system lets users customize analysis, and the ignore system prevents noise from irrelevant files.
+
+### How to verify
+
+```bash
+npm run lint        # zero errors
+npm run typecheck   # zero errors
+npm run build       # all packages build
+npm test            # all tests pass
+```
+
+### Design decisions
+
+- **Simple ignore matching** — uses path segment matching rather than full glob support. Sufficient for common patterns (directory names, file extensions) without heavy dependencies.
+- **Config merging** — rules not mentioned in config default to `warn`, so existing behavior is preserved.
+- **CLI --rules overrides config** — explicit CLI flags always win, matching the principle of least surprise.
+- **Early-return scope** — M8 implementation targets the simpler pattern (block-wrapped `return;`) rather than the full spec (function-level guard clauses). Conservative but safe.
+
+---
+
 ## 2026-03-06 — Repomix Export Workflow (versioned, ignored)
 
 ### What was implemented
