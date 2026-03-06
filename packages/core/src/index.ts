@@ -21,3 +21,15 @@ export {
 export type { DirEntry, FileEntry } from './file-filter.js';
 export { computeScore } from './scoring.js';
 export { buildMarkdownReport } from './report.js';
+export {
+  parseConfig,
+  mergeConfig,
+  filterRulesByConfig,
+  cliRulesToConfig,
+} from './config.js';
+export type { RuleConfig, RuleSeverityConfig, InspectorepoConfig } from './config.js';
+export {
+  parseIgnoreFile,
+  isIgnored,
+  filterIgnoredPaths,
+} from './ignore.js';

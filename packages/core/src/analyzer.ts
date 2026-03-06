@@ -5,6 +5,9 @@ import { allRules } from './rules/index.js';
 import { filterAnalyzableFiles } from './scanner.js';
 import { filterExcludedPaths, filterBySelectedDirs } from './file-filter.js';
 import { computeScore } from './scoring.js';
+import type { RuleConfig } from './config.js';
+import { filterRulesByConfig } from './config.js';
+import { filterIgnoredPaths } from './ignore.js';
 
 const SEVERITY_ORDER: Record<string, number> = { error: 0, warn: 1, info: 2 };
 
@@ -27,19 +30,34 @@ export interface AnalyzeInput {
   selectedDirectories: string[];
   options?: {
     rules?: Rule[];
+    ruleConfig?: RuleConfig;
+    ignorePatterns?: string[];
   };
 }
 
 export function analyzeCodebase(input: AnalyzeInput): AnalysisReport {
   const { files, selectedDirectories, options } = input;
-  const rules = options?.rules ?? allRules;
 
-  // Filter: only files under selected directories, exclude noise, keep .ts/.tsx
+  // Determine which rules to run
+  let rules: Rule[];
+  if (options?.rules) {
+    // Explicit rules array takes priority (used in tests)
+    rules = options.rules;
+  } else if (options?.ruleConfig) {
+    rules = filterRulesByConfig(allRules, options.ruleConfig);
+  } else {
+    rules = allRules;
+  }
+
+  // Filter: only files under selected directories, exclude noise, apply ignore patterns, keep .ts/.tsx
   let paths = files.map((f) => f.path);
   if (selectedDirectories.length > 0) {
     paths = filterBySelectedDirs(paths, selectedDirectories);
   }
   paths = filterExcludedPaths(paths);
+  if (options?.ignorePatterns) {
+    paths = filterIgnoredPaths(paths, options.ignorePatterns);
+  }
   paths = filterAnalyzableFiles(paths);
 
   // Sort for determinism
