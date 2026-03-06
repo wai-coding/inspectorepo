@@ -119,20 +119,43 @@ Try InspectoRepo locally in three steps:
 Analyze any TypeScript project from the terminal:
 
 ```bash
-# Markdown report to stdout
-npx inspectorepo analyze ./my-project --dirs src
+# Basic analysis (markdown report to stdout)
+inspectorepo analyze ./my-project
 
-# JSON output to file
-npx inspectorepo analyze ./my-project --format json --out report.json
+# Analyze specific directories with markdown output
+inspectorepo analyze ./my-project --dirs src --format md
+
+# JSON output
+inspectorepo analyze ./my-project --format json
+
+# Write report to file
+npx inspectorepo analyze ./my-project --out report.md
 
 # Limit issues and select specific directories
 npx inspectorepo analyze ./my-project --dirs src,lib --max-issues 10
+```
 
-# Analyze entire project (all non-excluded directories)
-npx inspectorepo analyze ./my-project
+### Auto-Fix
 
-# Write markdown report to file
-npx inspectorepo analyze ./my-project --out report.md
+Apply safe code fixes interactively:
+
+```bash
+inspectorepo fix ./my-project
+```
+
+The fix command runs analysis, finds issues with safe auto-fix suggestions, shows a preview of each proposed change, and asks for confirmation before applying. Only `optional-chaining`, `boolean-simplification`, and `unused-imports` rules support auto-fix. `complexity-hotspot` is never auto-applied.
+
+Example output:
+
+```
+optional-chaining suggestion
+File: src/user.ts:12
+Suggested diff:
+
+  - user && user.profile && user.profile.name
+  + user?.profile?.name
+
+Apply fix? (y/N)
 ```
 
 The CLI uses the same analysis engine as the web UI. Output is deterministic — same input always produces the same report.
@@ -143,9 +166,9 @@ The CLI uses the same analysis engine as the web UI. Output is deterministic —
 
 > Dark VSCode-like interface with file tree sidebar, issues list in the main panel, and detail/diff view on the right.
 
-## Sample Report
+## Sample Output
 
-See [examples/sample-report.md](./examples/sample-report.md) for a full analysis report generated from the [fixture repo](./examples/fixture-repo/).
+See [examples/sample-report.md](./examples/sample-report.md) for a full analysis report generated from the [fixture repo](./examples/fixture-repo/). This shows the exact Markdown output InspectoRepo produces, including severity emojis, issue tables, and collapsible proposed diffs.
 
 ## Roadmap
 
@@ -169,7 +192,7 @@ See [examples/sample-report.md](./examples/sample-report.md) for a full analysis
 
 ### V2 (planned)
 
-- [ ] Auto-apply suggested fixes
+- [x] Auto-apply suggested fixes (`inspectorepo fix`)
 - [x] CLI package for headless analysis
 - [ ] Custom rule authoring
 - [ ] VS Code extension

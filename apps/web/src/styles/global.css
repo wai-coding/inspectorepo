@@ -448,6 +448,12 @@ body,
   color: var(--text-secondary);
 }
 
+.detail-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .detail-patch-header {
   display: flex;
   justify-content: space-between;

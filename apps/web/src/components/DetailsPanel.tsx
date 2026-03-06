@@ -66,6 +66,14 @@ export function DetailsPanel({ issue }: DetailsPanelProps) {
             {issue.suggestion.details && (
               <p className="detail-details">{issue.suggestion.details}</p>
             )}
+            <div className="detail-actions">
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => copyText(issue.suggestion.summary + '\n' + (issue.suggestion.details ?? ''))}
+              >
+                Copy Suggested Fix
+              </button>
+            </div>
           </div>
         )}
 
@@ -77,7 +85,7 @@ export function DetailsPanel({ issue }: DetailsPanelProps) {
                 className="btn btn-secondary btn-sm"
                 onClick={() => copyText(diff)}
               >
-                Copy
+                Copy Diff
               </button>
             </div>
             <pre className="detail-patch">
