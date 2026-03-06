@@ -50,6 +50,7 @@ inspectorepo/
 ├── apps/
 │   └── web/              # React frontend (Vite)
 ├── packages/
+│   ├── cli/              # Headless CLI for terminal-based analysis
 │   ├── core/             # Analysis engine (ts-morph, rules, scoring, report)
 │   └── shared/           # Shared types (Issue, AnalysisReport, VirtualFile)
 ├── examples/
@@ -113,6 +114,29 @@ Try InspectoRepo locally in three steps:
 
    > **Browser support:** The folder picker uses the File System Access API (Chrome/Edge). Other browsers can use the Upload Folder fallback.
 
+## CLI
+
+Analyze any TypeScript project from the terminal:
+
+```bash
+# Markdown report to stdout
+npx inspectorepo analyze ./my-project --dirs src
+
+# JSON output to file
+npx inspectorepo analyze ./my-project --format json --out report.json
+
+# Limit issues and select specific directories
+npx inspectorepo analyze ./my-project --dirs src,lib --max-issues 10
+
+# Analyze entire project (all non-excluded directories)
+npx inspectorepo analyze ./my-project
+
+# Write markdown report to file
+npx inspectorepo analyze ./my-project --out report.md
+```
+
+The CLI uses the same analysis engine as the web UI. Output is deterministic — same input always produces the same report.
+
 ## Interface Preview
 
 ![InspectoRepo UI](./screenshots/ui-layout.png)
@@ -146,7 +170,7 @@ See [examples/sample-report.md](./examples/sample-report.md) for a full analysis
 ### V2 (planned)
 
 - [ ] Auto-apply suggested fixes
-- [ ] CLI package for headless analysis
+- [x] CLI package for headless analysis
 - [ ] Custom rule authoring
 - [ ] VS Code extension
 
