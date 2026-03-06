@@ -1,8 +1,10 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = resolve(import.meta.dirname, '..', '..');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(__dirname, '..', '..');
 const STATE_PATH = join(ROOT, 'ai', 'repomix-state.json');
 const EXPORTS_DIR = join(ROOT, 'ai', 'exports');
 
