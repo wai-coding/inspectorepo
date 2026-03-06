@@ -1,7 +1,9 @@
 import { resolve } from 'node:path';
 import { writeFileSync, existsSync } from 'node:fs';
+import { createInterface } from 'node:readline';
 import { analyzeCodebase, buildMarkdownReport } from '@inspectorepo/core';
 import { readFilesFromDisk, parseDirs, filterByDirs } from './fs-reader.js';
+import { isAutoFixable, applyFix, formatFixPreview } from './fixer.js';
 
 interface CliOptions {
   path: string;
@@ -12,9 +14,13 @@ interface CliOptions {
 }
 
 function printUsage(): void {
-  console.log(`Usage: inspectorepo analyze <path> [options]
+  console.log(`Usage: inspectorepo <command> <path> [options]
 
-Options:
+Commands:
+  analyze <path>       Analyze a TypeScript project
+  fix <path>           Apply safe auto-fixes to a project
+
+Options (analyze):
   --dirs <dirs>        Comma-separated directories to analyze (e.g. src,lib)
   --format <md|json>   Output format (default: md)
   --out <file>         Write output to file instead of stdout
@@ -29,7 +35,7 @@ function parseArgs(args: string[]): CliOptions | null {
     return null;
   }
 
-  if (args[0] !== 'analyze') {
+  if (args[0] !== 'analyze' && args[0] !== 'fix') {
     console.error(`Unknown command: ${args[0]}\n`);
     printUsage();
     return null;
@@ -91,7 +97,83 @@ function parseArgs(args: string[]): CliOptions | null {
   return opts;
 }
 
+function ask(question: string): Promise<string> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim().toLowerCase());
+    });
+  });
+}
+
+async function runFix(args: string[]): Promise<void> {
+  if (args.length < 2) {
+    console.error('Missing required <path> argument\n');
+    printUsage();
+    process.exitCode = 1;
+    return;
+  }
+
+  const rootDir = resolve(args[1]);
+  if (!existsSync(rootDir)) {
+    console.error(`Path does not exist: ${rootDir}`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const allFiles = readFilesFromDisk(rootDir);
+  if (allFiles.length === 0) {
+    console.error('No .ts/.tsx files found.');
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log(`Analyzing ${allFiles.length} files...\n`);
+  const report = analyzeCodebase({ files: allFiles, selectedDirectories: [] });
+
+  const fixable = report.issues.filter(isAutoFixable);
+  if (fixable.length === 0) {
+    console.log('No auto-fixable issues found.');
+    return;
+  }
+
+  console.log(`Found ${fixable.length} auto-fixable issue(s):\n`);
+
+  let applied = 0;
+  let skipped = 0;
+
+  for (const issue of fixable) {
+    console.log(formatFixPreview(issue));
+    const answer = await ask('Apply fix? (y/N) ');
+
+    if (answer === 'y' || answer === 'yes') {
+      const result = applyFix(rootDir, issue);
+      if (result.applied) {
+        console.log(`  ✓ Fixed ${issue.filePath}:${issue.range.start.line}\n`);
+        applied++;
+      } else {
+        console.log('  ✗ Could not apply fix (source may have changed)\n');
+        skipped++;
+      }
+    } else {
+      console.log('  Skipped.\n');
+      skipped++;
+    }
+  }
+
+  console.log(`\nDone: ${applied} fix(es) applied, ${skipped} skipped.`);
+}
+
 export function run(args: string[]): void {
+  if (args[0] === 'fix') {
+    runFix(args).catch((err) => {
+      console.error('Fix failed:', err);
+      process.exitCode = 1;
+    });
+    return;
+  }
+
   const opts = parseArgs(args);
   if (!opts) {
     process.exitCode = 1;
