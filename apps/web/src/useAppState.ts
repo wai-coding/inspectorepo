@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { AnalysisReport, Issue, VirtualFile } from '@inspectorepo/shared';
 import { buildDirectoryTree, pickDefaultDirs, analyzeCodebase, buildMarkdownReport } from '@inspectorepo/core';
 import type { DirEntry } from '@inspectorepo/core';
@@ -115,6 +115,13 @@ export function useAppState() {
   }, [state.report]);
 
   const canAnalyze = state.folderName !== null && state.selectedDirs.length > 0;
+
+  // Dev-only: expose loader for E2E / screenshot automation
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      (window as never as Record<string, unknown>).__inspectorepo_loadFolder = loadFolder;
+    }
+  }, [loadFolder]);
 
   return {
     state,
