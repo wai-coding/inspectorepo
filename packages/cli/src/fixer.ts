@@ -100,11 +100,26 @@ export function applyFix(rootDir: string, issue: Issue): FixResult {
 /** Format a fix preview for terminal display. */
 export function formatFixPreview(issue: Issue): string {
   const lines: string[] = [];
+  const diff = issue.suggestion.proposedDiff ?? '';
+  const parsed = parseDiff(diff);
+
   lines.push(`${issue.ruleId} suggestion`);
-  lines.push(`File: ${issue.filePath}:${issue.range.start.line}`);
-  lines.push('Suggested diff:');
   lines.push('');
-  for (const line of (issue.suggestion.proposedDiff ?? '').split('\n')) {
+  lines.push(`File: ${issue.filePath}`);
+  lines.push(`Line: ${issue.range.start.line}`);
+  lines.push('');
+
+  if (parsed) {
+    lines.push('Before:');
+    lines.push(parsed.oldText);
+    lines.push('');
+    lines.push('After:');
+    lines.push(parsed.newText ?? '(remove)');
+    lines.push('');
+  }
+
+  lines.push('Suggested diff:');
+  for (const line of diff.split('\n')) {
     lines.push(`  ${line}`);
   }
   lines.push('');
