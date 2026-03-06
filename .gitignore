@@ -5,5 +5,15 @@ dist/
 .env
 .env.local
 
+# Build artifacts (monorepo-wide)
+**/dist/
+**/.vite/
+**/coverage/
+**/out/
+**/.turbo/
+
 # Playwright video recordings (too large for git)
 screenshots/*.webm
+
+# Repomix exports (generated locally, not tracked)
+ai/exports/

@@ -42,6 +42,30 @@ This document guides all rule implementation work.
 
 ---
 
+## `ai/`
+
+### `repomix-state.json`
+
+Tracked version counter for repomix exports. Contains `{ "currentVersion": N }`. Incremented by the export script after each generation.
+
+### `scripts/generate-repomix-exports.ts`
+
+Node script (run via `npm run repopack`) that:
+1. Reads `ai/repomix-state.json` to get the current version
+2. Computes `nextVersion = currentVersion + 1`
+3. Runs `npx repomix` with ignore rules matching `.gitignore` + additional exclusions
+4. Gathers git info: last 10 commits, files changed, latest merge
+5. Writes `ai/exports/repo-pack-vN.md` and `ai/exports/changes-summary-vN.md`
+6. Updates `ai/repomix-state.json` with the new version
+
+The generated files under `ai/exports/` are git-ignored and never committed.
+
+### `exports/`
+
+Git-ignored directory containing generated repomix exports (`repo-pack-vN.md`, `changes-summary-vN.md`). These are uploaded to ChatGPT for review after each milestone merge.
+
+---
+
 ## `examples/`
 
 ### `fixture-repo/`
