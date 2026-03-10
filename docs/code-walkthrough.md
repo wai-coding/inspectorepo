@@ -326,6 +326,24 @@ Dark theme with CSS custom properties. Styles for: layout, top bar (summary badg
 
 ---
 
+## `.github/workflows/`
+
+### `ci.yml`
+
+Standard CI pipeline: runs lint, typecheck, build, and test on push to `main`/`dev` and on pull requests.
+
+### `inspectorepo-analysis.yml`
+
+GitHub Action that runs InspectoRepo analysis on pull requests (and manual `workflow_dispatch`). Steps:
+1. Checkout + Node 20 setup
+2. Install dependencies and build all packages
+3. Run `node packages/cli/dist/index.js analyze . --dirs packages,apps --format md --out inspectorepo-report.md`
+4. Upload the generated report as an artifact (`inspectorepo-report`)
+
+The report artifact can be downloaded from the Actions tab for each PR.
+
+---
+
 ## Repomix Workflow
 
 ### How milestone versioning works
