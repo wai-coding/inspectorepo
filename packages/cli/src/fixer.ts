@@ -49,8 +49,10 @@ export function parseDiff(diff: string): { oldText: string; newText: string | nu
 }
 
 /**
- * Apply a single fix to a file by replacing the old text with new text.
- * Uses line-based replacement for safety — only replaces the first occurrence.
+ * Apply a single fix to a file using line-based replacement.
+ * Locates the target line by the issue's line number, confirms it matches
+ * the expected pattern, and replaces only that line. Skips the fix if
+ * the expected text cannot be uniquely located.
  */
 export function applyFix(rootDir: string, issue: Issue): FixResult {
   const result: FixResult = {
@@ -75,8 +77,34 @@ export function applyFix(rootDir: string, issue: Issue): FixResult {
   }
 
   const { oldText, newText } = parsed;
+  const fileLines = content.split('\n');
 
-  // Find and replace the first occurrence of oldText
+  // Guard: check how many times the old text appears in the file
+  const occurrences = countOccurrences(content, oldText);
+  if (occurrences === 0) return result;
+  if (occurrences > 1) {
+    console.warn(`  ⚠ Skipped: pattern appears ${occurrences} times in file (expected 1)`);
+    return result;
+  }
+
+  // Line-based replacement: locate using the issue's reported line number
+  const targetLineIdx = issue.range.start.line - 1; // 0-based
+  if (targetLineIdx < 0 || targetLineIdx >= fileLines.length) return result;
+
+  const oldLines = oldText.split('\n');
+  // Verify that the file content at the target line matches the expected pattern
+  const matchesAtTarget = oldLines.every((expected, i) => {
+    const fileLineIdx = targetLineIdx + i;
+    if (fileLineIdx >= fileLines.length) return false;
+    return fileLines[fileLineIdx].includes(expected.trim());
+  });
+
+  if (!matchesAtTarget) {
+    console.warn('  ⚠ Skipped: unexpected context at target line');
+    return result;
+  }
+
+  // Apply replacement using indexOf on confirmed single occurrence
   const idx = content.indexOf(oldText);
   if (idx === -1) return result;
 
@@ -84,10 +112,8 @@ export function applyFix(rootDir: string, issue: Issue): FixResult {
     content = content.slice(0, idx) + newText + content.slice(idx + oldText.length);
   } else {
     // Remove the line entirely (unused import removal)
-    // Find the full line(s) containing oldText and remove them
     const before = content.slice(0, idx);
     const after = content.slice(idx + oldText.length);
-    // Remove any trailing newline from the deletion
     const trimmedAfter = after.startsWith('\n') ? after.slice(1) : after;
     content = before + trimmedAfter;
   }
@@ -97,13 +123,26 @@ export function applyFix(rootDir: string, issue: Issue): FixResult {
   return result;
 }
 
+/** Count non-overlapping occurrences of a substring in text. */
+function countOccurrences(text: string, search: string): number {
+  let count = 0;
+  let pos = 0;
+  while (true) {
+    const idx = text.indexOf(search, pos);
+    if (idx === -1) break;
+    count++;
+    pos = idx + search.length;
+  }
+  return count;
+}
+
 /** Format a fix preview for terminal display. */
 export function formatFixPreview(issue: Issue): string {
   const lines: string[] = [];
   const diff = issue.suggestion.proposedDiff ?? '';
   const parsed = parseDiff(diff);
 
-  lines.push(`${issue.ruleId} suggestion`);
+  lines.push(`Rule: ${issue.ruleId}`);
   lines.push('');
   lines.push(`File: ${issue.filePath}`);
   lines.push(`Line: ${issue.range.start.line}`);
