@@ -4,6 +4,40 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-10 — M13: VS Code Extension for InspectoRepo
+
+### What was implemented
+
+- **VS Code extension** (`packages/vscode-extension/`) — new workspace package that registers the `inspectorepo.runAnalysis` command, allowing InspectoRepo analysis to run directly inside VS Code.
+- **Command: InspectoRepo: Run Analysis** — detects the current workspace folder, invokes the CLI via `child_process.execFile`, and generates `inspectorepo-vscode-report.md` in the workspace root. Shows a progress notification during analysis and an info/error message on completion.
+- **Workspace safety** — if no workspace folder is open, displays a warning: "Open a workspace folder to run InspectoRepo analysis."
+- **CLI integration** — the extension resolves the CLI entry point (`packages/cli/dist/index.js`) relative to its own location and runs it with `--format md --out` flags.
+- **Documentation accuracy fixes** — corrected the `ignore.ts` header comment (was claiming full gitignore/`**` glob support; now accurately describes simple segment matching and `*.ext` patterns). Corrected the fixer documentation in `code-walkthrough.md` (was suggesting fully line-based patching; now accurately describes occurrence counting → line validation → indexOf replacement).
+- **README update** — added VS Code Extension section, updated project structure, marked roadmap item complete.
+- **Code walkthrough update** — added `packages/vscode-extension` section documenting command registration, CLI invocation, and report generation.
+
+### Why
+
+A VS Code extension provides the most convenient way to run InspectoRepo analysis — directly from the editor without switching to a terminal. The documentation fixes ensure comments and docs accurately reflect the actual implementation.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+### Design decisions
+
+- **CLI invocation via child_process** — reuses the existing CLI rather than duplicating analysis logic. The extension is a thin wrapper.
+- **`execFile` over `exec`** — safer than `exec` (no shell interpolation), with a 120s timeout to prevent hanging.
+- **Activation on command only** — no heavy activation events; the extension activates only when the command is triggered.
+- **ESLint ignore for extension** — the extension uses the `vscode` module which isn't available in the project's lint environment; ignoring the package avoids false positives.
+
+---
+
 ## 2026-03-10 — Fix: polished Human Summary generation with strict quality rules
 
 ### What was implemented

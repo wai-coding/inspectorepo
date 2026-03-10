@@ -47,7 +47,8 @@ inspectorepo/
 ├── packages/
 │   ├── cli/              # Headless CLI for terminal-based analysis
 │   ├── core/             # Analysis engine (ts-morph, rules, scoring, report)
-│   └── shared/           # Shared types (Issue, AnalysisReport, VirtualFile)
+│   ├── shared/           # Shared types (Issue, AnalysisReport, VirtualFile)
+│   └── vscode-extension/ # VS Code extension for in-editor analysis
 ├── examples/
 │   ├── fixture-repo/     # Sample TS files for testing all rules
 │   └── sample-report.md  # Generated analysis report
@@ -229,6 +230,16 @@ Supports simple `.inspectorepoignore` patterns (directory names and basic `*.ext
 
 See [examples/sample-report.md](./examples/sample-report.md) for a full analysis report generated from the [fixture repo](./examples/fixture-repo/). This shows the exact Markdown output InspectoRepo produces, including severity emojis, issue tables, and collapsible proposed diffs.
 
+## VS Code Extension
+
+InspectoRepo can run directly inside VS Code. The extension registers a command that invokes the CLI on the current workspace and generates a Markdown report.
+
+1. Open a workspace folder in VS Code
+2. Run the command **InspectoRepo: Run Analysis** from the Command Palette (`Ctrl+Shift+P`)
+3. A report (`inspectorepo-vscode-report.md`) is generated in the workspace root
+
+The extension uses the same analysis engine as the CLI and web UI.
+
 ## GitHub Action
 
 InspectoRepo runs automatically on every pull request via the `.github/workflows/inspectorepo-analysis.yml` workflow. It can also be triggered manually via `workflow_dispatch`. Steps:
@@ -272,7 +283,7 @@ Download the `inspectorepo-report` artifact from the Actions tab to see the full
 - [x] CLI package for headless analysis
 - [x] GitHub Action for automated PR analysis
 - [ ] Custom rule authoring
-- [ ] VS Code extension
+- [x] VS Code extension
 
 ## Screenshots
 
