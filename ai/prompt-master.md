@@ -67,11 +67,12 @@ After every PR merge into main (end of milestone):
 
 1. Sync local `main`: `git fetch origin && git checkout main && git pull`
 2. Run: `npm run repopack`
-3. Confirm the two files exist under `ai/exports/`:
-   - `ai/exports/repo-pack-vN.md`
+3. Confirm the three files exist under `ai/exports/`:
+   - `ai/exports/repo-pack-full-vN.md`
+   - `ai/exports/repo-pack-core-vN.md`
    - `ai/exports/changes-summary-vN.md`
 4. **STOP** — do NOT commit the exports (they are git-ignored)
-5. Tell the user to upload `repo-pack-vN.md` + `changes-summary-vN.md` to ChatGPT for full review
+5. Tell the user to upload all three files to ChatGPT for full review
 
 The version counter lives in `ai/repomix-state.json` (tracked). The exports live in `ai/exports/` (ignored).
 

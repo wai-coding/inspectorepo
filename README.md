@@ -143,7 +143,7 @@ The fix command runs analysis, finds issues with safe auto-fix suggestions, show
 Example output:
 
 ```
-optional-chaining suggestion
+Rule: optional-chaining
 
 File: src/user.ts
 Line: 42
@@ -217,7 +217,7 @@ coverage
 tests
 ```
 
-Patterns work like `.gitignore` — each line matches a path segment. The ignore file is automatically respected by the CLI.
+Supports simple `.inspectorepoignore` patterns (directory names and basic `*.ext` matches). Each line matches a path segment or filename wildcard. The ignore file is automatically respected by the CLI.
 
 ## Interface Preview
 
