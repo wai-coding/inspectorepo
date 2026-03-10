@@ -4,6 +4,38 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-10 — Final review fixes, repopack hardening, Quickdraw attempt
+
+### What was implemented
+
+- **GitHub Action alignment** — updated README to show the exact CLI command used in `.github/workflows/inspectorepo-analysis.yml`, including the `node packages/cli/dist/index.js analyze .` invocation, artifact retention (30 days), and manual `workflow_dispatch` trigger.
+- **Repopack post-cleanup verification** — `generate-repomix-exports.ts` now verifies after deleting old versions that no stale versioned files remain in `ai/exports/`. Fails with `process.exit(1)` if any old files survived cleanup or the file count is wrong. Also confirms exactly 3 export files exist for the new version.
+- **Prompt-master validation** — updated the Post-Merge Repomix Export section in `prompt-master.md` with explicit step-by-step validation: determine previous version before running, confirm new version > previous, confirm only latest files remain, print results, then stop.
+- **Code-walkthrough updates** — documented the post-cleanup verification step in both the `generate-repomix-exports.ts` section and the Repomix Workflow section.
+
+### Why
+
+These are the final polish items from the latest review. The repopack script needed stronger post-cleanup guarantees, the README needed exact alignment with the workflow file, and the prompt-master needed clearer validation steps to prevent incomplete runs.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+npm run repopack   # generates next version, verifies cleanup
+```
+
+### Quickdraw achievement attempt
+
+- **Issue created:** #21 ("Quickdraw achievement test issue")
+- **Issue closed:** immediately after creation
+- **Result:** SUCCESS — issue was created and closed within seconds
+- **Note:** The GitHub Quickdraw achievement may not appear instantaneously; GitHub processes achievements asynchronously.
+
+---
+
 ## 2026-03-10 — M12: GitHub Action for Automated Analysis
 
 ### What was implemented
