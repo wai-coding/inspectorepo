@@ -63,18 +63,27 @@ git push --force-with-lease origin dev
 
 ## Post-Merge Repomix Export
 
-After every PR merge into main (end of milestone):
+After EVERY PR merge into main (end of milestone):
 
 1. Sync local `main`: `git fetch origin && git checkout main && git pull`
 2. Run: `npm run repopack`
-3. Confirm the three files exist under `ai/exports/`:
+3. Confirm `ai/repomix-state.json` was incremented by 1
+4. Confirm these three files now exist under `ai/exports/`:
    - `ai/exports/repo-pack-full-vN.md`
    - `ai/exports/repo-pack-core-vN.md`
    - `ai/exports/changes-summary-vN.md`
-4. **STOP** — do NOT commit the exports (they are git-ignored)
-5. Tell the user to upload all three files to ChatGPT for full review
+5. **STOP immediately** — do NOT commit the exports (they are git-ignored)
+6. Tell the user to upload all three files to ChatGPT for full review
 
 The version counter lives in `ai/repomix-state.json` (tracked). The exports live in `ai/exports/` (ignored).
+
+### Enforcement Rules
+
+> **The task is NOT complete until the repopack export files for the new version exist and the version counter was incremented.**
+
+> **Do not describe the task as finished until you print the exact generated filenames.**
+
+If `npm run repopack` fails or any of the three files is missing, the milestone is NOT done — fix the issue and re-run.
 
 ## Human Code Style
 
@@ -154,3 +163,17 @@ Input:
 - proposed diff/snippet preview
 - markdown report export
   Auto-refactor is NOT implemented in V1.
+
+---
+
+## Final Mandatory Checklist (after each merged milestone)
+
+- [ ] PR merged into `main`
+- [ ] `dev` synced with `main`
+- [ ] `npm run repopack` executed
+- [ ] Version incremented in `ai/repomix-state.json`
+- [ ] `ai/exports/repo-pack-full-vN.md` exists
+- [ ] `ai/exports/repo-pack-core-vN.md` exists
+- [ ] `ai/exports/changes-summary-vN.md` exists
+- [ ] Exact generated filenames printed
+- [ ] User instructed to upload the 3 files to ChatGPT

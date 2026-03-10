@@ -147,11 +147,30 @@ This reads \`ai/repomix-state.json\`, increments the version, runs repomix, and 
 const summaryPath = join(EXPORTS_DIR, `changes-summary-v${nextVersion}.md`);
 writeFileSync(summaryPath, summary, 'utf-8');
 
-// Update state
+// Verify all 3 files exist
+const generatedFiles = [fullOutput, coreOutput, summaryPath];
+const missing = generatedFiles.filter(f => !existsSync(f));
+
+if (missing.length > 0) {
+  console.error('\nERROR: The following export files are missing after generation:');
+  for (const f of missing) {
+    console.error(`  - ${f}`);
+  }
+  process.exitCode = 1;
+  process.exit(1);
+}
+
+// Update state only after all files verified
 writeFileSync(STATE_PATH, JSON.stringify({ currentVersion: nextVersion }, null, 2) + '\n', 'utf-8');
-console.log(`\nDone! v${nextVersion} exports written to ai/exports/`);
-console.log(`  - repo-pack-full-v${nextVersion}.md`);
-console.log(`  - repo-pack-core-v${nextVersion}.md`);
-console.log(`  - changes-summary-v${nextVersion}.md`);
-console.log(`\nVersion updated to v${nextVersion} in ai/repomix-state.json`);
-console.log(`\nReminder: Do NOT commit the files under ai/exports/.`);
+
+console.log('\n========================================');
+console.log('Generated:');
+console.log(`  - ai/exports/repo-pack-full-v${nextVersion}.md`);
+console.log(`  - ai/exports/repo-pack-core-v${nextVersion}.md`);
+console.log(`  - ai/exports/changes-summary-v${nextVersion}.md`);
+console.log('');
+console.log(`Version updated to: v${nextVersion}`);
+console.log('========================================');
+console.log('');
+console.log('Reminder: Do NOT commit the files under ai/exports/.');
+console.log('Upload the 3 files above to ChatGPT for full review.');
