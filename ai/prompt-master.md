@@ -177,3 +177,24 @@ Input:
 - [ ] `ai/exports/changes-summary-vN.md` exists
 - [ ] Exact generated filenames printed
 - [ ] User instructed to upload the 3 files to ChatGPT
+
+---
+
+## Non-negotiable completion rule
+
+A task is NOT considered finished until ALL of the following conditions are satisfied:
+
+1. The PR has been merged into main.
+2. The local dev branch has been synced with main.
+3. The command `npm run repopack` has been executed.
+4. The value `currentVersion` in `ai/repomix-state.json` increased by exactly +1.
+5. The following files exist in `ai/exports/` with that new version number:
+
+   - `repo-pack-full-vN.md`
+   - `repo-pack-core-vN.md`
+   - `changes-summary-vN.md`
+
+6. The agent must print the exact filenames generated.
+7. The agent must STOP immediately afterwards.
+
+The task MUST NOT be declared finished unless all checks above succeed.
