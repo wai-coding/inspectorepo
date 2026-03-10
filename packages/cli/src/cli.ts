@@ -30,12 +30,12 @@ Commands:
   analyze <path>       Analyze a TypeScript project
   fix <path>           Apply safe auto-fixes to a project
 
-Options (analyze):
+Options:
   --dirs <dirs>        Comma-separated directories to analyze (e.g. src,lib)
   --rules <rules>      Comma-separated rules to run (e.g. optional-chaining,unused-imports)
-  --format <md|json>   Output format (default: md)
-  --out <file>         Write output to file instead of stdout
-  --max-issues <n>     Limit number of issues reported
+  --format <md|json>   Output format (default: md) (analyze only)
+  --out <file>         Write output to file instead of stdout (analyze only)
+  --max-issues <n>     Limit number of issues reported (analyze only)
   --help               Show this help message
 `);
 }
@@ -122,14 +122,13 @@ function ask(question: string): Promise<string> {
 }
 
 async function runFix(args: string[]): Promise<void> {
-  if (args.length < 2) {
-    console.error('Missing required <path> argument\n');
-    printUsage();
+  const opts = parseArgs(['fix', ...args.slice(1)]);
+  if (!opts) {
     process.exitCode = 1;
     return;
   }
 
-  const rootDir = resolve(args[1]);
+  const rootDir = resolve(opts.path);
   if (!existsSync(rootDir)) {
     console.error(`Path does not exist: ${rootDir}`);
     process.exitCode = 1;
@@ -137,14 +136,49 @@ async function runFix(args: string[]): Promise<void> {
   }
 
   const allFiles = readFilesFromDisk(rootDir);
-  if (allFiles.length === 0) {
+  const files = filterByDirs(allFiles, opts.dirs);
+
+  if (files.length === 0) {
     console.error('No .ts/.tsx files found.');
     process.exitCode = 1;
     return;
   }
 
-  console.log(`Analyzing ${allFiles.length} files...\n`);
-  const report = analyzeCodebase({ files: allFiles, selectedDirectories: [] });
+  const selectedDirs = opts.dirs.length > 0 ? opts.dirs : [];
+
+  // Build rule config: CLI --rules flag overrides config file
+  let ruleConfig: RuleConfig | undefined;
+  if (opts.rules) {
+    const allRuleIds = allRules.map((r) => r.id);
+    ruleConfig = cliRulesToConfig(opts.rules, allRuleIds);
+  } else {
+    const configPath = join(rootDir, '.inspectorepo.json');
+    if (existsSync(configPath)) {
+      const configJson = readFileSync(configPath, 'utf-8');
+      const parsed = parseConfig(configJson);
+      if (parsed) {
+        ruleConfig = mergeConfig(parsed.rules);
+      }
+    }
+  }
+
+  // Load .inspectorepoignore if present
+  let ignorePatterns: string[] | undefined;
+  const ignorePath = join(rootDir, '.inspectorepoignore');
+  if (existsSync(ignorePath)) {
+    const ignoreContent = readFileSync(ignorePath, 'utf-8');
+    ignorePatterns = parseIgnoreFile(ignoreContent);
+  }
+
+  console.log(`Analyzing ${files.length} files...\n`);
+  const report = analyzeCodebase({
+    files,
+    selectedDirectories: selectedDirs,
+    options: {
+      ...(ruleConfig ? { ruleConfig } : {}),
+      ...(ignorePatterns ? { ignorePatterns } : {}),
+    },
+  });
 
   const fixable = report.issues.filter(isAutoFixable);
   if (fixable.length === 0) {

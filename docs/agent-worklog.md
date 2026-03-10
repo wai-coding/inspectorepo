@@ -4,6 +4,38 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-10 — M11: Hardened Fix Engine, Pipeline Integration, Workflow Fixes
+
+### What was implemented
+
+- **Hardened fix engine** (`packages/cli/src/fixer.ts`) — replaced fragile `indexOf`-based patching with line-based replacement. `applyFix()` now: counts occurrences (skips if >1), verifies content at the target line number matches the expected pattern, and warns on unexpected context. Prevents accidental edits when a pattern appears multiple times or the file has changed since analysis.
+- **Fix pipeline integration** — `inspectorepo fix` now uses the same analyzer pipeline as `analyze`: loads `.inspectorepo.json` config, `.inspectorepoignore` patterns, respects `--dirs` and `--rules` flags.
+- **Fix safety tests** (`packages/cli/src/fixer.test.ts`) — 4 new `applyFix` tests: duplicate pattern skip, single occurrence apply, unexpected context skip, normal optional chaining fix. Uses real temp files.
+- **CLI fix preview format** — updated `formatFixPreview()` to use `Rule: <id>` header instead of `<id> suggestion`.
+- **Repomix workflow fix** — standardized prompt-master.md to reference `repo-pack-full-vN.md` + `repo-pack-core-vN.md` + `changes-summary-vN.md`. Updated code-walkthrough to match. Removed stale "early-return is a stub" text from changes-summary template.
+- **README fixes** — corrected ignore system description (no longer claims full gitignore compatibility), updated fix preview example.
+
+### Why
+
+The original fix engine used `indexOf` to find-and-replace, which is unsafe — it silently applies the wrong fix when a pattern appears multiple times. Line-based verification ensures the fix targets the correct location. Pipeline integration ensures `fix` and `analyze` behave identically.
+
+### How to verify
+
+```bash
+npm run lint        # zero errors
+npm run typecheck   # zero errors
+npm run build       # all packages build
+npm test            # all tests pass
+```
+
+### Design decisions
+
+- **Line-based verification** — the fix engine now checks that the target line number contains the expected text before applying. This prevents ghost edits when files have been modified since analysis.
+- **Occurrence counting** — if a pattern appears more than once, the fix is skipped entirely with a warning rather than guessing which one to replace.
+- **Pipeline reuse** — fix command shares the same config/ignore loading logic as analyze, avoiding code duplication and behavioral drift.
+
+---
+
 ## 2026-03-06 — M8/M9/M10: Early Return, Rule Config, Ignore System
 
 ### What was implemented

@@ -168,6 +168,29 @@ coverage
 tests
 ```
 
-Each line matches as a path segment (like `.gitignore`). Wildcard patterns (`*.test.ts`) match filenames.
+Each line matches as a path segment or basic `*.ext` wildcard. This is simpler than full gitignore — it handles directory names and file extension patterns, which covers the vast majority of use cases.
 
 Implementation: `ignore.ts` provides `parseIgnoreFile()`, `isIgnored()`, and `filterIgnoredPaths()`. The analyzer accepts optional `ignorePatterns` and filters paths after the standard exclude step.
+
+---
+
+## Fix engine safety
+
+The CLI `fix` command applies safe auto-fixes interactively. The fix engine uses line-based verification rather than blind `indexOf` replacement to prevent accidental edits.
+
+### Why indexOf replacement is unsafe
+
+A naive `content.indexOf(oldText)` approach silently replaces the first occurrence of a pattern — which may not be the instance the analyzer flagged. If a pattern like `user && user.name` appears on lines 10 and 50, and the issue is on line 50, `indexOf` would patch line 10 instead.
+
+### Line-based patching strategy
+
+1. **Count occurrences** — scan the file for the pattern. If it appears more than once, skip the fix and warn the user.
+2. **Verify target line** — check that the file content at the reported line number matches the expected text. If the file has changed since analysis, the context won't match and the fix is skipped.
+3. **Apply on confirmed match** — only after both guards pass, apply the replacement on the single confirmed occurrence.
+
+### Safety guards
+
+- **Duplicate pattern** → fix skipped with warning: "pattern appears N times in file (expected 1)"
+- **Unexpected context** → fix skipped with warning: "unexpected context at target line"
+- **Missing file** → fix skipped silently (file may have been deleted)
+- **No proposed diff** → fix skipped (rule doesn't support auto-fix)

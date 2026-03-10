@@ -53,16 +53,19 @@ Tracked version counter for repomix exports. Contains `{ "currentVersion": N }`.
 Node script (run via `npm run repopack`) that:
 1. Reads `ai/repomix-state.json` to get the current version
 2. Computes `nextVersion = currentVersion + 1`
-3. Runs `npx repomix` with ignore rules matching `.gitignore` + additional exclusions
+3. Runs `npx repomix` twice — once for a full pack, once for a core-only pack (excludes docs/screenshots/.github)
 4. Gathers git info: last 10 commits, files changed, latest merge
-5. Writes `ai/exports/repo-pack-vN.md` and `ai/exports/changes-summary-vN.md`
+5. Writes three files under `ai/exports/`:
+   - `repo-pack-full-vN.md` — full repository pack
+   - `repo-pack-core-vN.md` — core-only pack
+   - `changes-summary-vN.md` — milestone summary with PR links and commit log
 6. Updates `ai/repomix-state.json` with the new version
 
 The generated files under `ai/exports/` are git-ignored and never committed.
 
 ### `exports/`
 
-Git-ignored directory containing generated repomix exports (`repo-pack-vN.md`, `changes-summary-vN.md`). These are uploaded to ChatGPT for review after each milestone merge.
+Git-ignored directory containing generated repomix exports (`repo-pack-full-vN.md`, `repo-pack-core-vN.md`, `changes-summary-vN.md`). These are uploaded to ChatGPT for review after each milestone merge.
 
 ---
 
@@ -358,15 +361,19 @@ The repo pack files are large (thousands of lines) and change every run. Committ
 
 ### `packages/cli/src/fixer.ts`
 
-The fixer module provides safe auto-fix capabilities:
+The fixer module provides safe auto-fix capabilities with line-based verification:
 - `isAutoFixable(issue)` — checks if an issue's rule is in the safe allowlist (`optional-chaining`, `boolean-simplification`, `unused-imports`) and has a `proposedDiff`
 - `parseDiff(diff)` — parses `- old\n+ new` format into `{ oldText, newText }`, where `newText` is null for removal-only diffs
-- `applyFix(rootDir, issue)` — reads the file, finds the old text via `indexOf`, replaces it, writes back
-- `formatFixPreview(issue)` — formats a human-readable preview for terminal display showing file, line, before/after code, and suggested diff
+- `applyFix(rootDir, issue)` — reads the file, counts occurrences of the pattern (skips if >1), verifies the content at the reported line number matches the expected text, then replaces. Warns and skips on duplicate patterns or unexpected context
+- `countOccurrences(text, search)` — counts non-overlapping substring matches, used as a safety guard
+- `formatFixPreview(issue)` — formats a human-readable preview for terminal display showing rule id, file, line, before/after code, and suggested diff
+
+The fix engine deliberately avoids blind `indexOf` replacement. Instead it uses a three-step safety approach: (1) count occurrences to ensure uniqueness, (2) verify the target line matches expectations, (3) apply the replacement only on confirmed single match.
 
 ### `packages/cli/src/fixer.test.ts`
 
-10 tests covering `isAutoFixable` and `parseDiff` functions:
+14 tests covering `isAutoFixable`, `parseDiff`, and `applyFix`:
 - Auto-fixable: optional-chaining, boolean-simplification, unused-imports (all true with diff)
 - Not auto-fixable: complexity-hotspot (always false), missing diff (false)
 - Parse: optional chaining diff, boolean diff, removal-only diff, partial import fix, empty/invalid diff
+- Apply safety: duplicate pattern skipped, single occurrence applied, unexpected context skipped, normal optional chaining fix

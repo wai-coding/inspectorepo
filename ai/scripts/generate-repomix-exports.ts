@@ -107,11 +107,7 @@ PR: ${prLink}
 Compare: ${compareLink}
 
 ## Human Summary
-- Improved repomix workflow with full and core pack modes for size control
-- Enhanced changes-summary with PR links, known limitations, and next milestone sections
-- Added safe auto-fix CLI command (\`inspectorepo fix\`) for optional-chaining, boolean-simplification, and unused-imports
-- UI improvements: Copy Diff and Copy Suggested Fix buttons in the details panel
-- Updated documentation and README with CLI usage examples and sample output links
+(Fill in after merge — describe what changed in this milestone)
 
 ## Changes
 
@@ -126,14 +122,12 @@ ${filesChanged}
 \`\`\`
 
 ## Known Limitations
-- Early-return rule is still a stub (not yet implemented)
 - Auto-fix only supports 3 rules (optional-chaining, boolean-simplification, unused-imports)
 - No custom rule authoring yet
 - Complexity-hotspot is advisory only — no auto-fix support
 - Browser folder picker requires Chrome/Edge (File System Access API)
 
 ## Next Milestone
-- Implement early-return rule with full detection and suggested fixes
 - Add custom rule authoring API for user-defined rules
 - VS Code extension for in-editor analysis
 - Expand auto-fix to support more rule types
