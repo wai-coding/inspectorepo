@@ -92,26 +92,33 @@ function getLatestPRInfo(): PRInfo {
 // --- Files changed scoped to latest milestone ---
 
 function getMilestoneFilesChanged(pr: PRInfo): string[] {
-  // Strategy 1: use the merge commit's parent range
-  if (pr.mergeCommitSha) {
-    const files = run(`git diff ${pr.mergeCommitSha}^1..${pr.mergeCommitSha}^2 --name-only`);
-    if (files) return files.split('\n').filter(Boolean).sort();
-  }
-
-  // Strategy 2: use gh to get PR files directly
+  // Strategy 1: use gh to get PR files directly (most reliable cross-platform)
   if (pr.number) {
     const ghFiles = run(`gh pr diff ${pr.number} --name-only`);
     if (ghFiles) return ghFiles.split('\n').filter(Boolean).sort();
   }
 
-  // Strategy 3: latest merge commit range on main
-  const mergeLog = run('git log --merges --oneline -1 --format=%H main');
-  if (mergeLog) {
-    const files = run(`git diff ${mergeLog}^1..${mergeLog}^2 --name-only`);
-    if (files) return files.split('\n').filter(Boolean).sort();
+  // Strategy 2: use merge commit parents via rev-parse (avoids ^ escaping issues)
+  if (pr.mergeCommitSha) {
+    const parent1 = run(`git rev-parse ${pr.mergeCommitSha}~1`);
+    const parent2 = run(`git log --format=%H ${pr.mergeCommitSha} --max-count=1`);
+    if (parent1 && parent2) {
+      const files = run(`git diff ${parent1}..${parent2} --name-only`);
+      if (files) return files.split('\n').filter(Boolean).sort();
+    }
   }
 
-  // Fallback: diff between the two most recent commits on main
+  // Strategy 3: latest merge commit on main
+  const mergeLog = run('git log --merges --format=%H -1 main');
+  if (mergeLog) {
+    const parent = run(`git rev-parse ${mergeLog}~1`);
+    if (parent) {
+      const files = run(`git diff ${parent}..${mergeLog} --name-only`);
+      if (files) return files.split('\n').filter(Boolean).sort();
+    }
+  }
+
+  // Fallback: diff between HEAD and its parent
   const files = run('git diff HEAD~1 --name-only');
   return files ? files.split('\n').filter(Boolean).sort() : [];
 }
@@ -205,18 +212,33 @@ function generateHumanSummary(pr: PRInfo, files: string[], commits: string): str
 const PLACEHOLDER_PHRASES = [
   'fill in after merge',
   'describe what changed',
-  'todo',
-  'placeholder',
-  'tbd',
+];
+
+// Regex patterns for word-boundary matching to avoid false positives
+const PLACEHOLDER_WORD_PATTERNS = [
+  /\btodo\b/i,
+  /\bplaceholder\b/i,
+  /\btbd\b/i,
 ];
 
 function validateSummaryContent(content: string): void {
-  // Check for placeholder phrases
+  // Check for placeholder phrases (exact substrings)
   const lower = content.toLowerCase();
   for (const phrase of PLACEHOLDER_PHRASES) {
     if (lower.includes(phrase)) {
       console.error(`\nERROR: Summary contains placeholder text: "${phrase}"`);
       process.exit(1);
+    }
+  }
+
+  // Check for placeholder words (word-boundary match in Human Summary section only)
+  const humanSection = content.match(/## Human Summary\n([\s\S]*?)(?=\n##|$)/);
+  if (humanSection) {
+    for (const pattern of PLACEHOLDER_WORD_PATTERNS) {
+      if (pattern.test(humanSection[1])) {
+        console.error(`\nERROR: Human Summary contains placeholder word matching: ${pattern}`);
+        process.exit(1);
+      }
     }
   }
 
