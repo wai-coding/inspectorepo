@@ -156,21 +156,21 @@ if (missing.length > 0) {
   for (const f of missing) {
     console.error(`  - ${f}`);
   }
-  process.exitCode = 1;
   process.exit(1);
 }
 
 // Update state only after all files verified
 writeFileSync(STATE_PATH, JSON.stringify({ currentVersion: nextVersion }, null, 2) + '\n', 'utf-8');
 
-console.log('\n========================================');
-console.log('Generated:');
-console.log(`  - ai/exports/repo-pack-full-v${nextVersion}.md`);
-console.log(`  - ai/exports/repo-pack-core-v${nextVersion}.md`);
-console.log(`  - ai/exports/changes-summary-v${nextVersion}.md`);
 console.log('');
-console.log(`Version updated to: v${nextVersion}`);
-console.log('========================================');
+console.log('----------------------------------------');
+console.log('Repomix export successful');
 console.log('');
-console.log('Reminder: Do NOT commit the files under ai/exports/.');
-console.log('Upload the 3 files above to ChatGPT for full review.');
+console.log('Generated files:');
+console.log(`ai/exports/repo-pack-full-v${nextVersion}.md`);
+console.log(`ai/exports/repo-pack-core-v${nextVersion}.md`);
+console.log(`ai/exports/changes-summary-v${nextVersion}.md`);
+console.log('');
+console.log('Version updated to:');
+console.log(`v${nextVersion}`);
+console.log('----------------------------------------');
