@@ -78,6 +78,13 @@ Version is derived from existing filenames in `ai/exports/`. If no exports exist
 
 If `npm run repopack` fails or any file is missing, the milestone is NOT done — fix and re-run.
 
+### Changes Summary Requirements
+
+The generated `changes-summary-vN.md` must:
+- Contain auto-generated Human Summary bullets derived from PR metadata and changed files — never placeholder text
+- Scope Files Changed to only the latest merged PR/milestone — not a broad history window
+- Pass validation: at least 3 human summary bullets, no placeholder phrases, non-empty Files Changed
+
 ## Human Code Style
 
 Write code that looks human:
@@ -168,19 +175,9 @@ A task is NOT finished until:
 3. `npm run repopack` executed
 4. New version > previous highest version
 5. `ai/exports/repo-pack-full-vN.md`, `repo-pack-core-vN.md`, `changes-summary-vN.md` exist
-6. Old export versions deleted — only the latest remains
-7. Previous version, new version, and exact filenames printed
-8. User instructed to upload the 3 files to ChatGPT
-3. The command `npm run repopack` has been executed.
-4. The new version number is strictly greater than the previous highest export version.
-5. The following files exist in `ai/exports/` with that new version number:
-
-   - `repo-pack-full-vN.md`
-   - `repo-pack-core-vN.md`
-   - `changes-summary-vN.md`
-
-6. All older export versions have been deleted — only the latest set remains.
-7. The agent must print the previous version, new version, and exact filenames generated.
-8. The agent must STOP immediately afterwards.
+6. `changes-summary-vN.md` contains auto-generated human summary bullets (no placeholders), and Files Changed scoped to the latest merged milestone only
+7. Old export versions deleted — only the latest remains
+8. Previous version, new version, and exact filenames printed
+9. User instructed to upload the 3 files to ChatGPT
 
 The task MUST NOT be declared finished unless all checks above succeed.

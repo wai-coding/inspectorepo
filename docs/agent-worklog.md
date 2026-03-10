@@ -4,6 +4,44 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-10 — Fix: milestone-specific repopack summaries
+
+### What was implemented
+
+- **Removed placeholder text** — the `Human Summary` section in `changes-summary-vN.md` no longer contains `(Fill in after merge — describe what changed in this milestone)`. It is now auto-generated from real repository data.
+- **Auto-generated Human Summary** — the script builds 3–6 factual bullet points using: (1) PR title from the latest merged PR, (2) key lines from PR body, (3) area-based bullets from categorized changed files (e.g. "Updated core analysis engine (3 files)"), (4) recent commit subjects as fallback. Bullets are deduplicated and capped at 6.
+- **Milestone-scoped Files Changed** — replaced `git diff HEAD~10 --name-only` (which mixed unrelated older files) with a strategy that targets only the latest merged PR/milestone: first tries `git diff mergeCommit^1..mergeCommit^2`, then `gh pr diff N --name-only`, then the latest merge commit range on main. Files are sorted deterministically.
+- **PR metadata extraction** — enhanced `getLatestPRInfo()` to fetch PR number, title, body, and merge commit SHA via `gh pr list --json`. The compare link now points to the PR's files tab.
+- **Summary content validation** — added `validateSummaryContent()` that fails with `process.exit(1)` if: placeholder phrases are detected, Human Summary has fewer than 3 bullets, or Files Changed is empty.
+- **Prompt-master update** — added "Changes Summary Requirements" subsection, fixed duplicate Completion Rule entries, added summary validation to completion checklist.
+- **Code-walkthrough update** — rewrote the `generate-repomix-exports.ts` section to document all new functions (`getLatestPRInfo`, `getMilestoneFilesChanged`, `categorizeFiles`, `generateHumanSummary`, `validateSummaryContent`) and the updated summary structure.
+
+### Why
+
+The previous script generated a placeholder Human Summary that required manual editing, and used `HEAD~10` for Files Changed which polluted the summary with unrelated older files. Both problems made the changes-summary unreliable for external review.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+npm run repopack   # generates next version with auto-generated summary
+```
+
+After running repopack, open `ai/exports/changes-summary-vN.md` and confirm:
+- Human Summary has real bullets (no placeholder text)
+- Files Changed lists only files from the latest merged PR
+
+### Design decisions
+
+- **Multi-strategy file detection** — tries merge commit range first (most precise), then `gh pr diff` (works even when local history is shallow), then latest merge on main. Accepts the first non-empty result.
+- **Area categorization** — groups files by directory prefix (core, cli, web, docs, etc.) to generate meaningful area-based bullets.
+- **Validation before cleanup** — the summary is validated before old versions are deleted, preventing data loss if generation produces bad output.
+
+---
+
 ## 2026-03-10 — M12 finalization: workflow validation, prompt-master cleanup, docs alignment
 
 ### What was implemented
