@@ -356,7 +356,18 @@ The version is derived from filenames already present in `ai/exports/`. Each `np
 3. Verifies no stale versioned files remain (fails with `process.exit(1)` if cleanup was incomplete)
 4. Confirms exactly 3 export files exist for the new version
 
-After each milestone merge, run `npm run repopack` and upload the outputs to ChatGPT for review.
+### Post-merge workflow
+
+After each milestone merge, the post-merge workflow is:
+
+1. Merge PR into `main`
+2. Sync `dev` with `main` (hard reset + force-with-lease push)
+3. Determine previous highest export version in `ai/exports/`
+4. Run `npm run repopack`
+5. Confirm new version is strictly greater than previous
+6. Confirm only latest export files remain
+7. Print previous version, new version, and exact filenames
+8. Stop — exports are git-ignored, not committed. Upload to ChatGPT for review.
 
 ### Full vs Core repo pack
 

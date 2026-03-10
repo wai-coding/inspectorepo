@@ -63,38 +63,20 @@ git push --force-with-lease origin dev
 
 ## Post-Merge Repomix Export
 
-After EVERY PR merge into main (end of milestone):
+After EVERY PR merge into main (end of milestone), execute these steps in order:
 
-1. **Before running repopack:** determine the previous highest export version in `ai/exports/` (e.g. v8)
-2. Run: `npm run repopack`
-3. **Validate the output:**
-   - Confirm the new version is strictly greater than the previous version (e.g. v9 > v8)
-   - Confirm ONLY the latest export files remain in `ai/exports/` — no older versions
-   - Confirm exactly these three files exist for the new version:
-     - `ai/exports/repo-pack-full-vN.md`
-     - `ai/exports/repo-pack-core-vN.md`
-     - `ai/exports/changes-summary-vN.md`
-4. **Print the result:**
-   - Previous version (e.g. v8)
-   - New version (e.g. v9)
-   - Exact filenames of the 3 generated files
-5. **STOP immediately** — do NOT commit the exports (they are git-ignored)
-6. Print:
-   - previous version
-   - new version
-   - exact filenames generated
-7. **STOP immediately** — do NOT commit the exports (they are git-ignored)
-8. Tell the user to upload all three files to ChatGPT for full review
+1. Merge the PR into `main`
+2. Sync `dev` with `main` (`git reset --hard origin/main` + `git push --force-with-lease`)
+3. Determine the previous highest export version in `ai/exports/` (e.g. v9)
+4. Run: `npm run repopack`
+5. Confirm the new version is strictly greater than the previous (e.g. v10 > v9)
+6. Confirm only the latest export files remain in `ai/exports/` — no older versions
+7. Print previous version, new version, and exact filenames of the 3 generated files
+8. **STOP** — do NOT commit the exports (they are git-ignored). Tell the user to upload all three files to ChatGPT.
 
-No tracked state file is used. The version is derived from the highest version number found in existing export filenames. If no exports exist, the script starts at v1. Only the latest export version should remain in `ai/exports/` after repopack completes.
+Version is derived from existing filenames in `ai/exports/`. If no exports exist, the script starts at v1. The script deletes older versions automatically after validating the new set.
 
-### Enforcement Rules
-
-> **The task is NOT complete until the new export files exist with a version number strictly greater than the previously existing exports.**
-
-> **Do not describe the task as finished until you print the previous version, new version, and exact generated filenames.**
-
-If `npm run repopack` fails or any of the three files is missing, the milestone is NOT done — fix the issue and re-run.
+If `npm run repopack` fails or any file is missing, the milestone is NOT done — fix and re-run.
 
 ## Human Code Style
 
@@ -177,27 +159,18 @@ Input:
 
 ---
 
-## Final Mandatory Checklist (after each merged milestone)
+## Completion Rule
 
-- [ ] PR merged into `main`
-- [ ] `dev` synced with `main`
-- [ ] `npm run repopack` executed
-- [ ] New version is strictly greater than the previous highest version
-- [ ] `ai/exports/repo-pack-full-vN.md` exists
-- [ ] `ai/exports/repo-pack-core-vN.md` exists
-- [ ] `ai/exports/changes-summary-vN.md` exists
-- [ ] Old export versions deleted — only the latest version remains
-- [ ] Previous version, new version, and exact filenames printed
-- [ ] User instructed to upload the 3 files to ChatGPT
+A task is NOT finished until:
 
----
-
-## Non-negotiable completion rule
-
-A task is NOT considered finished until ALL of the following conditions are satisfied:
-
-1. The PR has been merged into main.
-2. The local dev branch has been synced with main.
+1. PR merged into `main`
+2. `dev` synced with `main`
+3. `npm run repopack` executed
+4. New version > previous highest version
+5. `ai/exports/repo-pack-full-vN.md`, `repo-pack-core-vN.md`, `changes-summary-vN.md` exist
+6. Old export versions deleted — only the latest remains
+7. Previous version, new version, and exact filenames printed
+8. User instructed to upload the 3 files to ChatGPT
 3. The command `npm run repopack` has been executed.
 4. The new version number is strictly greater than the previous highest export version.
 5. The following files exist in `ai/exports/` with that new version number:
