@@ -57,6 +57,8 @@ Node script (run via `npm run repopack`) that:
    - `repo-pack-core-vN.md` — core-only pack
    - `changes-summary-vN.md` — milestone summary with PR links and commit log
 7. Verifies all 3 files exist; exits with code 1 if any are missing
+8. Verifies the new version is strictly greater than the previous highest version
+9. Deletes all older export versions — only the latest set remains
 
 No tracked state file is used. The version is derived entirely from existing export filenames.
 
@@ -328,7 +330,7 @@ Dark theme with CSS custom properties. Styles for: layout, top bar (summary badg
 
 ### How milestone versioning works
 
-The version is derived from filenames already present in `ai/exports/`. Each `npm run repopack` run scans for the highest existing version number and increments by one. No tracked state file is used — this avoids version resets when git clean or git reset happens. The generated exports live in `ai/exports/` which is git-ignored — they are never committed. After each milestone merge, run `npm run repopack` and upload the outputs to ChatGPT for review.
+The version is derived from filenames already present in `ai/exports/`. Each `npm run repopack` run scans for the highest existing version number and increments by one. No tracked state file is used — this avoids version resets when git clean or git reset happens. The generated exports live in `ai/exports/` which is git-ignored — they are never committed. After generation, the script validates the new version is strictly greater than the previous one, then deletes all older export versions so only the latest set remains. After each milestone merge, run `npm run repopack` and upload the outputs to ChatGPT for review.
 
 ### Full vs Core repo pack
 

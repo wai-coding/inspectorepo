@@ -4,6 +4,37 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-10 — Finalize repopack version validation and cleanup
+
+### What was implemented
+
+- **Version validation** — `generate-repomix-exports.ts` now verifies the new version is strictly greater than the previous highest version. Exits with code 1 if validation fails.
+- **Old version cleanup** — after the new version is verified, the script deletes all older export files from `ai/exports/`. Only the latest version set remains.
+- **Output format** — the script now prints both the previous version and the new version, plus the exact generated filenames and a confirmation that old versions were deleted.
+- **Updated prompt-master.md** — post-merge workflow now explicitly requires version comparison, old version cleanup, and printing both previous and new versions.
+- **Updated docs** — code-walkthrough and agent-worklog updated to document the new validation and cleanup behavior.
+
+### Why
+
+The repopack workflow needed stronger guarantees: confirming the new version is strictly greater prevents stale regeneration, and cleaning up old versions prevents confusion about which export set is current.
+
+### How to verify
+
+```bash
+npm run lint        # zero errors
+npm run typecheck   # zero errors
+npm run build       # all packages build
+npm test            # all tests pass
+npm run repopack   # generates next version, deletes old versions
+```
+
+### Design decisions
+
+- **Delete after verify** — old versions are only deleted after the new version's 3 files are confirmed to exist. This prevents data loss if generation fails.
+- **Single version in exports** — keeping only the latest version avoids confusion and saves disk space.
+
+---
+
 ## 2026-03-10 — Fix: Derive repomix version from local export files
 
 ### What was implemented
