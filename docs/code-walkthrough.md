@@ -303,6 +303,20 @@ Node filesystem utilities:
 
 ---
 
+## `packages/vscode-extension`
+
+VS Code extension that runs InspectoRepo analysis directly inside the editor.
+
+### `src/extension.ts`
+
+Extension entry point:
+- `activate(context)` — registers the `inspectorepo.runAnalysis` command. When triggered: checks for an open workspace folder (shows warning if none), resolves the CLI path relative to the extension, runs the CLI via `child_process.execFile` with `--format md --out inspectorepo-vscode-report.md`, and shows a progress notification during analysis. Displays an info message on success or error message on failure.
+- `deactivate()` — no-op cleanup.
+
+The extension activates only when the command is invoked (no heavy activation events). It delegates all analysis work to the existing CLI package.
+
+---
+
 ## `apps/web`
 
 Vite + React + TypeScript frontend with a VSCode-like layout.
@@ -427,14 +441,14 @@ The repo pack files are large (thousands of lines) and change every run. Committ
 
 ### `packages/cli/src/fixer.ts`
 
-The fixer module provides safe auto-fix capabilities with line-based verification:
+The fixer module provides safe auto-fix capabilities with occurrence-counted, line-validated replacement:
 - `isAutoFixable(issue)` — checks if an issue's rule is in the safe allowlist (`optional-chaining`, `boolean-simplification`, `unused-imports`) and has a `proposedDiff`
 - `parseDiff(diff)` — parses `- old\n+ new` format into `{ oldText, newText }`, where `newText` is null for removal-only diffs
-- `applyFix(rootDir, issue)` — reads the file, counts occurrences of the pattern (skips if >1), verifies the content at the reported line number matches the expected text, then replaces. Warns and skips on duplicate patterns or unexpected context
+- `applyFix(rootDir, issue)` — reads the file and applies a controlled replacement: (1) counts non-overlapping occurrences of the old text — skips if zero or more than one, (2) validates that the content at the issue's reported line number matches the expected pattern, (3) uses `indexOf` on the confirmed single occurrence to perform the replacement. Warns and skips on duplicate patterns or unexpected context
 - `countOccurrences(text, search)` — counts non-overlapping substring matches, used as a safety guard
 - `formatFixPreview(issue)` — formats a human-readable preview for terminal display showing rule id, file, line, before/after code, and suggested diff
 
-The fix engine deliberately avoids blind `indexOf` replacement. Instead it uses a three-step safety approach: (1) count occurrences to ensure uniqueness, (2) verify the target line matches expectations, (3) apply the replacement only on confirmed single match.
+The fix engine ensures only one occurrence of the target text exists in the file, validates the intended line matches expectations, then performs a controlled `indexOf` replacement on the confirmed single match. This three-step approach (occurrence counting → line validation → indexOf replacement) prevents accidental edits when a pattern appears multiple times or the file has changed since analysis.
 
 ### `packages/cli/src/fixer.test.ts`
 

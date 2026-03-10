@@ -1,6 +1,7 @@
 /**
- * Simple .inspectorepoignore loader with gitignore-like pattern matching.
- * Supports directory names, file patterns, and ** globs.
+ * Simple .inspectorepoignore loader.
+ * Supports simple directory/segment matching and basic *.extension patterns.
+ * Does not implement full gitignore semantics or advanced globbing (e.g. **).
  */
 
 /**
