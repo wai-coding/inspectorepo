@@ -1,6 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { parseDiff, isAutoFixable } from './fixer.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { parseDiff, isAutoFixable, applyFix } from './fixer.js';
 import type { Issue } from '@inspectorepo/shared';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
 function makeIssue(ruleId: string, proposedDiff?: string): Issue {
   return {
@@ -81,5 +84,110 @@ describe('parseDiff', () => {
   it('returns null for empty diff', () => {
     const result = parseDiff('some random text');
     expect(result).toBeNull();
+  });
+});
+
+describe('applyFix', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'fixer-test-'));
+    mkdirSync(join(tmpDir, 'src'), { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function writeTestFile(relativePath: string, content: string): void {
+    writeFileSync(join(tmpDir, relativePath), content, 'utf-8');
+  }
+
+  function readTestFile(relativePath: string): string {
+    return readFileSync(join(tmpDir, relativePath), 'utf-8');
+  }
+
+  function makeFixIssue(
+    ruleId: string,
+    filePath: string,
+    line: number,
+    proposedDiff: string,
+  ): Issue {
+    return {
+      id: `test:${line}:${ruleId}`,
+      ruleId,
+      severity: 'info',
+      message: 'test',
+      filePath,
+      range: { start: { line, column: 1 }, end: { line, column: 1 } },
+      suggestion: { summary: 'test', details: 'test', proposedDiff },
+    };
+  }
+
+  it('skips fix when pattern appears multiple times', () => {
+    const content = 'user && user.name\nconst x = 1;\nuser && user.name\n';
+    writeTestFile('src/dup.ts', content);
+
+    const issue = makeFixIssue(
+      'optional-chaining',
+      'src/dup.ts',
+      1,
+      '- user && user.name\n+ user?.name',
+    );
+
+    const result = applyFix(tmpDir, issue);
+    expect(result.applied).toBe(false);
+    // File should be unchanged
+    expect(readTestFile('src/dup.ts')).toBe(content);
+  });
+
+  it('applies fix when pattern appears once', () => {
+    const content = 'const a = user && user.name;\nconst b = 2;\n';
+    writeTestFile('src/single.ts', content);
+
+    const issue = makeFixIssue(
+      'optional-chaining',
+      'src/single.ts',
+      1,
+      '- user && user.name\n+ user?.name',
+    );
+
+    const result = applyFix(tmpDir, issue);
+    expect(result.applied).toBe(true);
+    expect(readTestFile('src/single.ts')).toBe('const a = user?.name;\nconst b = 2;\n');
+  });
+
+  it('skips fix when target line has unexpected context', () => {
+    const content = 'const x = 1;\nuser && user.name\n';
+    writeTestFile('src/ctx.ts', content);
+
+    // Issue says line 1, but the pattern is on line 2
+    const issue = makeFixIssue(
+      'optional-chaining',
+      'src/ctx.ts',
+      1,
+      '- user && user.name\n+ user?.name',
+    );
+
+    const result = applyFix(tmpDir, issue);
+    expect(result.applied).toBe(false);
+    // File should be unchanged
+    expect(readTestFile('src/ctx.ts')).toBe(content);
+  });
+
+  it('applies normal optional chaining fix correctly', () => {
+    const content = 'function get() {\n  return obj && obj.value;\n}\n';
+    writeTestFile('src/chain.ts', content);
+
+    const issue = makeFixIssue(
+      'optional-chaining',
+      'src/chain.ts',
+      2,
+      '- obj && obj.value\n+ obj?.value',
+    );
+
+    const result = applyFix(tmpDir, issue);
+    expect(result.applied).toBe(true);
+    expect(readTestFile('src/chain.ts')).toBe('function get() {\n  return obj?.value;\n}\n');
   });
 });
