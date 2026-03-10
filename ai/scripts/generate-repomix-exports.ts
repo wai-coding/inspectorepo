@@ -153,7 +153,7 @@ const AREA_BULLET_TEMPLATES: Record<string, string> = {
   shared: 'Refined shared type definitions across packages',
   web: 'Polished the web UI for a more intuitive analysis workflow',
   docs: 'Kept documentation aligned with the latest codebase changes',
-  ai: 'Improved repopack summary generation so milestone exports are cleaner and more reliable',
+  ai: 'Improved milestone export generation so summaries are cleaner and more reliable',
   workflow: 'Strengthened CI/CD pipeline for more reliable automated checks',
   examples: 'Updated example fixtures to reflect current rule coverage',
   screenshots: 'Refreshed screenshots and demo automation',
@@ -186,6 +186,25 @@ const BANNED_BULLET_PATTERNS: RegExp[] = [
   /^bump /i,
   /^update dependencies/i,
   /^Merge branch/i,
+  // Meta/internal implementation text
+  /\bbullets?\b/i,
+  /\bnoise filtering\b/i,
+  /\bconventional commit/i,
+  /\brecruiter/i,
+  /\bmetadata\b/i,
+  /\bfallback\b/i,
+  /\bcommit subjects?\b/i,
+  /\bcommit prefixes?\b/i,
+  /\bcommit message/i,
+  /\bgit log\b/i,
+  /\bgit diff\b/i,
+  /\brepopack\b/i,
+  /\brepomix\b/i,
+  /\bvalidation\b/i,
+  /\bregex\b/i,
+  /\bpatterns?\s+match/i,
+  /\.ts[x]?[:\s]/i,
+  /Checks? passed/i,
 ];
 
 function isBannedBullet(bullet: string): boolean {
@@ -253,12 +272,13 @@ function generateHumanSummary(pr: PRInfo, files: string[], _commits: string): st
     }
   }
 
-  // PR body lines (cleaned)
+  // PR body lines (cleaned, heavily filtered)
   if (pr.body) {
     const lines = pr.body.split('\n')
       .map(l => cleanBulletText(l))
       .filter(l => l.length > 10 && l.length < 200)
       .filter(l => !l.startsWith('#') && !l.startsWith('```'))
+      .filter(l => !l.endsWith(':'))  // Skip header/intro lines
       .filter(l => !isBannedBullet(l))
       .filter(l => !PLACEHOLDER_WORD_PATTERNS.some(p => p.test(l)));
     for (const line of lines.slice(0, 4)) {
@@ -300,9 +320,9 @@ function generateHumanSummary(pr: PRInfo, files: string[], _commits: string): st
     bullets = buildAreaBullets(files);
     // Always ensure at least 3
     const fallbacks = [
-      'Improved repopack summary generation so milestone exports are cleaner and more reliable',
+      'Improved milestone export generation so summaries are cleaner and more reliable',
       'Kept workflow documentation aligned with the automated export pipeline',
-      'Strengthened export validation so only the newest repopack version remains after generation',
+      'Strengthened export quality checks so only clean, polished summaries are produced',
     ];
     for (const fb of fallbacks) {
       if (bullets.length >= 3) break;
@@ -480,9 +500,9 @@ if (bulletErrors.length > 0) {
   humanBullets = buildAreaBullets(milestoneFiles);
   // Ensure 3–5 range
   const fallbacks = [
-    'Improved repopack summary generation so milestone exports are cleaner and more reliable',
+    'Improved milestone export generation so summaries are cleaner and more reliable',
     'Kept workflow documentation aligned with the automated export pipeline',
-    'Strengthened export validation so only the newest repopack version remains after generation',
+    'Strengthened export quality checks so only clean, polished summaries are produced',
   ];
   for (const fb of fallbacks) {
     if (humanBullets.length >= 3) break;
