@@ -53,12 +53,12 @@ Node script (run via `npm run repopack`) that:
 4. Runs `npx repomix` twice — once for a full pack, once for a core-only pack (excludes docs/screenshots/.github)
 5. Extracts latest merged PR metadata via `gh` (number, title, body, merge commit SHA)
 6. Determines milestone-scoped files changed using the merge commit range (falls back to `gh pr diff`, then latest merge on main)
-7. Auto-generates Human Summary bullets from PR title/body, file area categorization, and commit subjects — no placeholders
+7. Auto-generates polished, recruiter-friendly Human Summary bullets (3–5) — strips commit noise, validates against banned patterns, retries with area-based fallback if needed
 8. Writes three files under `ai/exports/`:
    - `repo-pack-full-vN.md` — full repository pack
    - `repo-pack-core-vN.md` — core-only pack
-   - `changes-summary-vN.md` — milestone summary with PR links, auto-generated summary, and scoped file list
-9. Validates summary content: at least 3 human summary bullets, no placeholder phrases, non-empty Files Changed
+   - `changes-summary-vN.md` — milestone summary with PR links, polished summary, and scoped file list
+9. Validates summary content: 3–5 bullets, no banned noise, no duplicates, no empty bullets, non-empty Files Changed
 10. Verifies all 3 files exist; exits with code 1 if any are missing
 11. Verifies the new version is strictly greater than the previous highest version
 12. Deletes all older export versions — only the latest set remains
@@ -68,8 +68,28 @@ Key functions:
 - `getLatestPRInfo()` — queries `gh` for the latest merged PR's number, title, body, and merge commit SHA
 - `getMilestoneFilesChanged(pr)` — uses merge commit parent range, falls back to `gh pr diff`, then latest merge commit on main
 - `categorizeFiles(files)` — groups changed files by area (core, cli, web, docs, ai, workflow, etc.)
-- `generateHumanSummary(pr, files, commits)` — produces 3–6 factual bullets from PR metadata, area categories, and commit subjects
-- `validateSummaryContent(content)` — fails if placeholder phrases are found, bullet count < 3, or Files Changed is empty
+- `cleanBulletText(raw)` — strips conventional-commit prefixes (`fix:`, `feat:`, etc.), merge request lines, and list markers from raw text
+- `isBannedBullet(bullet)` — checks a bullet against the `BANNED_BULLET_PATTERNS` regex array (merge noise, commit prefixes, internal meta text)
+- `buildAreaBullets(files)` — generates polished, outcome-focused bullets from changed file areas using `AREA_BULLET_TEMPLATES` (e.g. "Improved the core analysis engine for better detection accuracy")
+- `validateBullets(bullets)` — enforces 3–5 count, no banned patterns, no duplicates, no empty bullets; returns list of failures
+- `generateHumanSummary(pr, files, commits)` — produces 3–5 polished, milestone-specific bullets: (1) cleans PR title/body, (2) fills from area templates, (3) validates and retries with pure area fallback if needed
+- `validateSummaryContent(content)` — validates the written summary file: placeholder phrases, bullet count 3–5, banned noise in each bullet, duplicates, empty bullets, non-empty Files Changed
+
+#### Human Summary Quality Rules
+
+The script enforces strict quality rules on every Human Summary bullet:
+
+**Banned patterns** (any match causes rejection):
+- `Merge pull request`, `Merge branch`
+- Conventional commit prefixes: `fix:`, `feat:`, `chore:`, `refactor:`, `docs:`, `ci:`, `style:`, `perf:`, `test:`, `build:`
+- Internal/meta text: `filter banned words`, `summary extraction`, `PR body`, `cleanup regex`, `merge noise`, `regex cleanup`, `PR body line filtering`, `WIP`, `bump`, `update dependencies`
+
+**Structural rules**:
+- Exactly 3–5 bullets (no fewer, no more)
+- No duplicate bullets (case-insensitive)
+- No empty bullets
+
+**Fallback strategy**: If PR metadata produces noisy or insufficient bullets, the script generates bullets from changed file area groups using polished templates. If even the fallback fails validation, the script aborts with `process.exit(1)`.
 
 No tracked state file is used. The version is derived entirely from existing export filenames.
 

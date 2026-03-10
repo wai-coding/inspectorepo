@@ -4,7 +4,37 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
-## 2026-03-10 — Fix: milestone-specific repopack summaries
+## 2026-03-10 — Fix: polished Human Summary generation with strict quality rules
+
+### What was implemented
+
+- **Polished Human Summary generation** — the `generateHumanSummary()` function now produces 3–5 recruiter-friendly, milestone-specific, outcome-focused bullets instead of raw commit subjects or generic "Updated X (N files)" text.
+- **Banned noise filtering** — a comprehensive list of banned patterns (`Merge pull request`, `fix:`, `feat:`, `chore:`, `refactor:`, `docs:`, `filter banned words`, `summary extraction`, `PR body`, `cleanup regex`, `merge noise`, etc.) blocks any noisy or internal text from appearing in the Human Summary.
+- **Commit text cleaning** — `cleanBulletText()` strips conventional-commit prefixes, merge request lines, and list markers before using any PR/commit text as a bullet source.
+- **Area-based fallback bullets** — when PR metadata is weak or all candidate bullets are filtered out, the script generates polished bullets from changed file areas (e.g. "Improved the core analysis engine for better detection accuracy" instead of "Updated core (3 files)").
+- **Strict bullet validation** — `validateBullets()` enforces: exactly 3–5 bullets, no banned patterns, no duplicates, no empty bullets. If the initial attempt fails validation, the script regenerates from the area-based fallback and aborts with `process.exit(1)` if the fallback also fails.
+- **Enhanced `validateSummaryContent()`** — now checks bullet count bounds (3–5), individual bullet noise, duplicates, and empty bullets in the written summary file, with clear diagnostic output.
+
+### Why
+
+Previous Human Summary output often contained raw commit messages (e.g. `fix: improve repopack human summary generation`), merge noise (`Merge pull request #22 from…`), and generic file-count bullets (`Updated AI agent instructions/exports (2 files)`). These are not suitable for a recruiter-facing portfolio export. The new system guarantees polished, outcome-focused bullets every time.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+npm run repopack   # generates next version — Human Summary must be polished
+```
+
+### Design decisions
+
+- **Banned pattern list as regex array** — allows both exact and pattern-based matching. Easy to extend.
+- **Two-phase generation with retry** — first attempt uses PR metadata + area bullets; if validation fails, fall back to pure area-based bullets. Only aborts if the fallback also fails.
+- **Area bullet templates** — each file area maps to a single polished sentence template rather than a generic "Updated X (N files)" format.
+- **3–5 bullet range** — enough to convey milestone scope without clutter. Capped at 5 to keep summaries scannable.
 
 ### What was implemented
 
