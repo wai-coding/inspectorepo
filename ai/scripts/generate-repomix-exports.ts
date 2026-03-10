@@ -172,7 +172,8 @@ function generateHumanSummary(pr: PRInfo, files: string[], commits: string): str
   if (pr.body) {
     const lines = pr.body.split('\n')
       .map(l => l.replace(/^[-*]\s*/, '').trim())
-      .filter(l => l.length > 10 && l.length < 200 && !l.startsWith('#') && !l.startsWith('```'));
+      .filter(l => l.length > 10 && l.length < 200 && !l.startsWith('#') && !l.startsWith('```'))
+      .filter(l => !PLACEHOLDER_WORD_PATTERNS.some(p => p.test(l)));
     for (const line of lines.slice(0, 3)) {
       if (!bullets.some(b => b.toLowerCase() === line.toLowerCase())) {
         bullets.push(line);
