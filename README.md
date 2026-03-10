@@ -229,6 +229,17 @@ Supports simple `.inspectorepoignore` patterns (directory names and basic `*.ext
 
 See [examples/sample-report.md](./examples/sample-report.md) for a full analysis report generated from the [fixture repo](./examples/fixture-repo/). This shows the exact Markdown output InspectoRepo produces, including severity emojis, issue tables, and collapsible proposed diffs.
 
+## GitHub Action
+
+InspectoRepo runs automatically on every pull request via a GitHub Actions workflow. The workflow:
+
+1. Checks out the code
+2. Installs dependencies and builds all packages
+3. Runs `inspectorepo analyze` on the repository source
+4. Uploads the generated Markdown report as a build artifact
+
+You can also trigger it manually via `workflow_dispatch`. Download the `inspectorepo-report` artifact from the Actions tab to see the full analysis.
+
 ## Roadmap
 
 ### V1 (current)
@@ -255,6 +266,7 @@ See [examples/sample-report.md](./examples/sample-report.md) for a full analysis
 
 - [x] Auto-apply suggested fixes (`inspectorepo fix`)
 - [x] CLI package for headless analysis
+- [x] GitHub Action for automated PR analysis
 - [ ] Custom rule authoring
 - [ ] VS Code extension
 

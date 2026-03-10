@@ -4,6 +4,37 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-10 — M12: GitHub Action for Automated Analysis
+
+### What was implemented
+
+- **GitHub Action workflow** (`.github/workflows/inspectorepo-analysis.yml`) — runs InspectoRepo analysis automatically on every pull request. Also supports manual `workflow_dispatch`. Steps: checkout, Node 20 setup, install, build, run `inspectorepo analyze`, upload report as artifact.
+- **README update** — added "GitHub Action" section explaining the automated analysis workflow. Updated V2 roadmap to mark GitHub Action as complete.
+- **Docs update** — added `.github/workflows/` section to code-walkthrough documenting both `ci.yml` and the new `inspectorepo-analysis.yml`.
+
+### Why
+
+Running InspectoRepo analysis in CI provides automated code quality feedback on every PR without manual effort. The report artifact makes it easy to review analysis results directly from the Actions tab.
+
+### How to verify
+
+```bash
+npm run lint        # zero errors
+npm run typecheck   # zero errors
+npm run build       # all packages build
+npm test            # all tests pass
+```
+
+The workflow runs automatically on PRs. For manual testing, trigger via `workflow_dispatch` from the Actions tab.
+
+### Design decisions
+
+- **Artifact upload over PR comment** — uploading a report artifact is simpler and more reliable than parsing output for PR comments. A TODO is left for future PR comment enhancement.
+- **`--dirs packages,apps`** — analyzes only source code directories, skipping examples/fixtures/screenshots.
+- **Separate from CI** — the analysis workflow is its own file rather than a step in `ci.yml` to keep concerns separated.
+
+---
+
 ## 2026-03-10 — Finalize repopack version validation and cleanup
 
 ### What was implemented
