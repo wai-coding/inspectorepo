@@ -1,4 +1,4 @@
-import { writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync, readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +8,14 @@ const ROOT = resolve(__dirname, '..', '..');
 const EXPORTS_DIR = join(ROOT, 'ai', 'exports');
 
 const EXPORT_PATTERN = /^(?:repo-pack-full|repo-pack-core|changes-summary)-v(\d+)\.md$/;
+
+function run(cmd: string): string {
+  try {
+    return execSync(cmd, { cwd: ROOT, encoding: 'utf-8' }).trim();
+  } catch {
+    return '';
+  }
+}
 
 // Derive version from existing export filenames
 function getHighestVersion(): number {
@@ -38,12 +46,210 @@ function deleteOldVersions(keepVersion: number): void {
   }
 }
 
+// --- PR metadata extraction ---
+
+interface PRInfo {
+  number: string;
+  title: string;
+  body: string;
+  prLink: string;
+  compareLink: string;
+  mergeCommitSha: string;
+}
+
+const repoUrl = run('git remote get-url origin')
+  .replace(/\.git$/, '')
+  .replace(/^git@github\.com:/, 'https://github.com/');
+
+function getLatestPRInfo(): PRInfo {
+  const raw = run('gh pr list --state merged --limit 1 --json number,title,body,mergeCommit --jq ".[0]"');
+  if (raw) {
+    try {
+      const pr = JSON.parse(raw);
+      const num = String(pr.number ?? '');
+      if (/^\d+$/.test(num)) {
+        return {
+          number: num,
+          title: pr.title ?? '',
+          body: pr.body ?? '',
+          prLink: `${repoUrl}/pull/${num}`,
+          compareLink: `${repoUrl}/pull/${num}/files`,
+          mergeCommitSha: pr.mergeCommit?.oid ?? '',
+        };
+      }
+    } catch { /* fall through */ }
+  }
+  return {
+    number: '',
+    title: '',
+    body: '',
+    prLink: `${repoUrl}/pulls (check latest)`,
+    compareLink: `${repoUrl}/compare/main...dev`,
+    mergeCommitSha: '',
+  };
+}
+
+// --- Files changed scoped to latest milestone ---
+
+function getMilestoneFilesChanged(pr: PRInfo): string[] {
+  // Strategy 1: use the merge commit's parent range
+  if (pr.mergeCommitSha) {
+    const files = run(`git diff ${pr.mergeCommitSha}^1..${pr.mergeCommitSha}^2 --name-only`);
+    if (files) return files.split('\n').filter(Boolean).sort();
+  }
+
+  // Strategy 2: use gh to get PR files directly
+  if (pr.number) {
+    const ghFiles = run(`gh pr diff ${pr.number} --name-only`);
+    if (ghFiles) return ghFiles.split('\n').filter(Boolean).sort();
+  }
+
+  // Strategy 3: latest merge commit range on main
+  const mergeLog = run('git log --merges --oneline -1 --format=%H main');
+  if (mergeLog) {
+    const files = run(`git diff ${mergeLog}^1..${mergeLog}^2 --name-only`);
+    if (files) return files.split('\n').filter(Boolean).sort();
+  }
+
+  // Fallback: diff between the two most recent commits on main
+  const files = run('git diff HEAD~1 --name-only');
+  return files ? files.split('\n').filter(Boolean).sort() : [];
+}
+
+// --- Human summary generation ---
+
+function categorizeFiles(files: string[]): Map<string, string[]> {
+  const groups = new Map<string, string[]>();
+  for (const f of files) {
+    let area = 'other';
+    if (f.startsWith('packages/core/')) area = 'core';
+    else if (f.startsWith('packages/cli/')) area = 'cli';
+    else if (f.startsWith('packages/shared/')) area = 'shared';
+    else if (f.startsWith('apps/web/')) area = 'web';
+    else if (f.startsWith('docs/')) area = 'docs';
+    else if (f.startsWith('ai/')) area = 'ai';
+    else if (f.startsWith('.github/')) area = 'workflow';
+    else if (f.startsWith('examples/')) area = 'examples';
+    else if (f.startsWith('screenshots/')) area = 'screenshots';
+    else if (f === 'README.md' || f === 'package.json') area = 'root';
+    const list = groups.get(area) ?? [];
+    list.push(f);
+    groups.set(area, list);
+  }
+  return groups;
+}
+
+const AREA_LABELS: Record<string, string> = {
+  core: 'core analysis engine',
+  cli: 'CLI package',
+  shared: 'shared types',
+  web: 'web frontend',
+  docs: 'documentation',
+  ai: 'AI agent instructions/exports',
+  workflow: 'GitHub Actions workflows',
+  examples: 'example fixtures',
+  screenshots: 'screenshots/automation',
+  root: 'root config',
+  other: 'project files',
+};
+
+function generateHumanSummary(pr: PRInfo, files: string[], commits: string): string[] {
+  const bullets: string[] = [];
+
+  // Use PR title as first bullet if available
+  if (pr.title) {
+    bullets.push(pr.title);
+  }
+
+  // Extract key points from PR body if available
+  if (pr.body) {
+    const lines = pr.body.split('\n')
+      .map(l => l.replace(/^[-*]\s*/, '').trim())
+      .filter(l => l.length > 10 && l.length < 200 && !l.startsWith('#') && !l.startsWith('```'));
+    for (const line of lines.slice(0, 3)) {
+      if (!bullets.some(b => b.toLowerCase() === line.toLowerCase())) {
+        bullets.push(line);
+      }
+    }
+  }
+
+  // Generate area-based bullets from changed files
+  const groups = categorizeFiles(files);
+  for (const [area, areaFiles] of groups) {
+    if (bullets.length >= 6) break;
+    const label = AREA_LABELS[area] ?? area;
+    const bullet = `Updated ${label} (${areaFiles.length} file${areaFiles.length === 1 ? '' : 's'})`;
+    if (!bullets.some(b => b.toLowerCase().includes(label))) {
+      bullets.push(bullet);
+    }
+  }
+
+  // If still not enough, extract from recent commit subjects
+  if (bullets.length < 3 && commits) {
+    const subjects = commits.split('\n')
+      .map(l => l.replace(/^[a-f0-9]+ /, ''))
+      .filter(Boolean);
+    for (const sub of subjects.slice(0, 3)) {
+      if (bullets.length >= 6) break;
+      if (!bullets.some(b => b.toLowerCase() === sub.toLowerCase())) {
+        bullets.push(sub);
+      }
+    }
+  }
+
+  return bullets.slice(0, 6);
+}
+
+// --- Summary content validation ---
+
+const PLACEHOLDER_PHRASES = [
+  'fill in after merge',
+  'describe what changed',
+  'todo',
+  'placeholder',
+  'tbd',
+];
+
+function validateSummaryContent(content: string): void {
+  // Check for placeholder phrases
+  const lower = content.toLowerCase();
+  for (const phrase of PLACEHOLDER_PHRASES) {
+    if (lower.includes(phrase)) {
+      console.error(`\nERROR: Summary contains placeholder text: "${phrase}"`);
+      process.exit(1);
+    }
+  }
+
+  // Check Human Summary has at least 3 bullets
+  const summarySection = content.match(/## Human Summary\n([\s\S]*?)(?=\n##|$)/);
+  if (summarySection) {
+    const bulletCount = (summarySection[1].match(/^- /gm) ?? []).length;
+    if (bulletCount < 3) {
+      console.error(`\nERROR: Human Summary has only ${bulletCount} bullets (need at least 3)`);
+      process.exit(1);
+    }
+  } else {
+    console.error('\nERROR: Human Summary section not found in changes-summary');
+    process.exit(1);
+  }
+
+  // Check Files Changed is not empty
+  const filesSection = content.match(/## Files Changed\n\n```\n([\s\S]*?)```/);
+  if (!filesSection || !filesSection[1].trim()) {
+    console.error('\nERROR: Files Changed section is empty');
+    process.exit(1);
+  }
+}
+
+// ============================================================
+// Main script
+// ============================================================
+
 const previousVersion = getHighestVersion();
 const nextVersion = previousVersion + 1;
 
 console.log(`Generating repomix exports v${nextVersion}...`);
 
-// Ensure exports directory exists
 if (!existsSync(EXPORTS_DIR)) {
   mkdirSync(EXPORTS_DIR, { recursive: true });
 }
@@ -63,7 +269,6 @@ const baseIgnore = [
   'screenshots/*.webm',
 ];
 
-// Core mode excludes additional directories
 const coreExtraIgnore = [
   'screenshots',
   'docs',
@@ -83,69 +288,42 @@ function runRepomix(outputPath: string, ignoreList: string[]): void {
   }
 }
 
-// Generate full pack (excludes base noise)
+// Generate full pack
 const fullOutput = join(EXPORTS_DIR, `repo-pack-full-v${nextVersion}.md`);
 console.log('Generating full repo pack...');
 runRepomix(fullOutput, baseIgnore);
 
-// Generate core pack (excludes base + docs/screenshots/.github)
+// Generate core pack
 const coreOutput = join(EXPORTS_DIR, `repo-pack-core-v${nextVersion}.md`);
 console.log('Generating core repo pack...');
 runRepomix(coreOutput, [...baseIgnore, ...coreExtraIgnore]);
 
-// Gather git info for changes summary
-function run(cmd: string): string {
-  try {
-    return execSync(cmd, { cwd: ROOT, encoding: 'utf-8' }).trim();
-  } catch {
-    return '(unavailable)';
-  }
-}
+// Gather milestone-specific data
+const prInfo = getLatestPRInfo();
+const milestoneFiles = getMilestoneFilesChanged(prInfo);
+const recentCommits = run('git log --oneline -10');
+const humanBullets = generateHumanSummary(prInfo, milestoneFiles, recentCommits);
 
-const lastCommits = run('git log --oneline -10');
-const filesChanged = run('git diff HEAD~10 --name-only');
-
-// Detect latest merged PR link
-const repoUrl = run('git remote get-url origin')
-  .replace(/\.git$/, '')
-  .replace(/^git@github\.com:/, 'https://github.com/');
-
-function getLatestPRInfo(): { prLink: string; compareLink: string } {
-  const prNumber = run('gh pr list --state merged --limit 1 --json number --jq ".[0].number"');
-  if (prNumber && prNumber !== '(unavailable)' && /^\d+$/.test(prNumber)) {
-    return {
-      prLink: `${repoUrl}/pull/${prNumber}`,
-      compareLink: `${repoUrl}/compare/v${nextVersion - 1}...v${nextVersion}`,
-    };
-  }
-  return {
-    prLink: `${repoUrl}/pulls (check latest)`,
-    compareLink: `${repoUrl}/compare/main...dev`,
-  };
-}
-
-const { prLink, compareLink } = getLatestPRInfo();
-
-// Write changes summary
+// Build changes summary
 const summary = `# InspectoRepo — Milestone v${nextVersion}
 
 ## PR
-PR: ${prLink}
-Compare: ${compareLink}
+PR: ${prInfo.prLink}
+Compare: ${prInfo.compareLink}
 
 ## Human Summary
-(Fill in after merge — describe what changed in this milestone)
+${humanBullets.map(b => `- ${b}`).join('\n')}
 
 ## Changes
 
 \`\`\`
-${lastCommits}
+${recentCommits}
 \`\`\`
 
 ## Files Changed
 
 \`\`\`
-${filesChanged}
+${milestoneFiles.join('\n')}
 \`\`\`
 
 ## Known Limitations
@@ -174,6 +352,12 @@ This scans \`ai/exports/\` for existing versioned files, increments the version,
 const summaryPath = join(EXPORTS_DIR, `changes-summary-v${nextVersion}.md`);
 writeFileSync(summaryPath, summary, 'utf-8');
 
+// Validate summary content before proceeding
+console.log('\nValidating changes-summary content...');
+const writtenContent = readFileSync(summaryPath, 'utf-8');
+validateSummaryContent(writtenContent);
+console.log('Summary validation passed.');
+
 // Verify all 3 files exist
 const generatedFiles = [fullOutput, coreOutput, summaryPath];
 const missing = generatedFiles.filter(f => !existsSync(f));
@@ -192,7 +376,7 @@ if (nextVersion <= previousVersion) {
   process.exit(1);
 }
 
-// Delete old versions now that new version is verified
+// Delete old versions only after all files verified
 deleteOldVersions(nextVersion);
 
 // Verify old versions were actually removed
@@ -226,16 +410,14 @@ console.log('');
 console.log('----------------------------------------');
 console.log('Repomix export successful');
 console.log('');
-console.log('Previous version:');
-console.log(previousVersion > 0 ? `v${previousVersion}` : '(none)');
-console.log('');
-console.log('New version:');
-console.log(`v${nextVersion}`);
+console.log(`Previous version: ${previousVersion > 0 ? `v${previousVersion}` : '(none)'}`);
+console.log(`New version: v${nextVersion}`);
 console.log('');
 console.log('Generated files:');
-console.log(`ai/exports/repo-pack-full-v${nextVersion}.md`);
-console.log(`ai/exports/repo-pack-core-v${nextVersion}.md`);
-console.log(`ai/exports/changes-summary-v${nextVersion}.md`);
+console.log(`  ai/exports/repo-pack-full-v${nextVersion}.md`);
+console.log(`  ai/exports/repo-pack-core-v${nextVersion}.md`);
+console.log(`  ai/exports/changes-summary-v${nextVersion}.md`);
 console.log('');
-console.log('Validation passed: only latest version remains.');
+console.log('Old versions deleted: YES');
+console.log('Summary validation passed: YES');
 console.log('----------------------------------------');

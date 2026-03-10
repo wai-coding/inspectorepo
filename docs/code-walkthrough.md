@@ -47,19 +47,29 @@ This document guides all rule implementation work.
 ### `scripts/generate-repomix-exports.ts`
 
 Node script (run via `npm run repopack`) that:
-1. Scans `ai/exports/` for existing versioned filenames (e.g. `repo-pack-full-v8.md`)
+1. Scans `ai/exports/` for existing versioned filenames (e.g. `repo-pack-full-v10.md`)
 2. Finds the highest version number N present
 3. Computes `nextVersion = N + 1` (starts at v1 if no files exist)
 4. Runs `npx repomix` twice — once for a full pack, once for a core-only pack (excludes docs/screenshots/.github)
-5. Gathers git info: last 10 commits, files changed, latest merge
-6. Writes three files under `ai/exports/`:
+5. Extracts latest merged PR metadata via `gh` (number, title, body, merge commit SHA)
+6. Determines milestone-scoped files changed using the merge commit range (falls back to `gh pr diff`, then latest merge on main)
+7. Auto-generates Human Summary bullets from PR title/body, file area categorization, and commit subjects — no placeholders
+8. Writes three files under `ai/exports/`:
    - `repo-pack-full-vN.md` — full repository pack
    - `repo-pack-core-vN.md` — core-only pack
-   - `changes-summary-vN.md` — milestone summary with PR links and commit log
-7. Verifies all 3 files exist; exits with code 1 if any are missing
-8. Verifies the new version is strictly greater than the previous highest version
-9. Deletes all older export versions — only the latest set remains
-10. **Post-cleanup verification** — scans exports dir again and fails with `process.exit(1)` if any stale versioned files remain or the file count is unexpected
+   - `changes-summary-vN.md` — milestone summary with PR links, auto-generated summary, and scoped file list
+9. Validates summary content: at least 3 human summary bullets, no placeholder phrases, non-empty Files Changed
+10. Verifies all 3 files exist; exits with code 1 if any are missing
+11. Verifies the new version is strictly greater than the previous highest version
+12. Deletes all older export versions — only the latest set remains
+13. **Post-cleanup verification** — scans exports dir again and fails with `process.exit(1)` if any stale versioned files remain or the file count is unexpected
+
+Key functions:
+- `getLatestPRInfo()` — queries `gh` for the latest merged PR's number, title, body, and merge commit SHA
+- `getMilestoneFilesChanged(pr)` — uses merge commit parent range, falls back to `gh pr diff`, then latest merge commit on main
+- `categorizeFiles(files)` — groups changed files by area (core, cli, web, docs, ai, workflow, etc.)
+- `generateHumanSummary(pr, files, commits)` — produces 3–6 factual bullets from PR metadata, area categories, and commit subjects
+- `validateSummaryContent(content)` — fails if placeholder phrases are found, bullet count < 3, or Files Changed is empty
 
 No tracked state file is used. The version is derived entirely from existing export filenames.
 
@@ -376,13 +386,13 @@ The repomix script generates two pack files:
 - **`repo-pack-full-vN.md`** — excludes only noise: `node_modules`, `dist`, `build`, `.git`, `.next`, `coverage`, `.turbo`, `.cache`, `ai/exports`, `examples`, `screenshots/*.webm`
 - **`repo-pack-core-vN.md`** — also excludes `screenshots`, `docs`, `.github` for a smaller context window focused on source code
 
-### New summary structure
+### Summary structure
 
 `changes-summary-vN.md` includes:
-- **PR** — auto-detected link from the latest merged PR (via `gh`)
-- **Human Summary** — 4–6 bullet points describing the milestone
-- **Changes** — last 10 commits
-- **Files Changed** — `git diff --name-only`
+- **PR** — auto-detected link and compare URL from the latest merged PR (via `gh`)
+- **Human Summary** — 3–6 auto-generated bullet points derived from PR title/body, changed file areas, and commit subjects (never placeholder text)
+- **Changes** — last 10 commits (oneline format)
+- **Files Changed** — scoped to the latest merged PR only (uses merge commit range, `gh pr diff`, or latest merge on main as fallback)
 - **Known Limitations** — current tool limitations
 - **Next Milestone** — planned features
 - **Regenerate** — instructions to regenerate
