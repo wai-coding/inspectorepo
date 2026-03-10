@@ -65,14 +65,20 @@ git push --force-with-lease origin dev
 
 After EVERY PR merge into main (end of milestone):
 
-1. Determine the highest existing export version in `ai/exports/`
+1. **Before running repopack:** determine the previous highest export version in `ai/exports/` (e.g. v8)
 2. Run: `npm run repopack`
-3. Confirm the newly generated version is strictly greater than the previous highest version
-4. Confirm these three files now exist under `ai/exports/`:
-   - `ai/exports/repo-pack-full-vN.md`
-   - `ai/exports/repo-pack-core-vN.md`
-   - `ai/exports/changes-summary-vN.md`
-5. Old export versions are automatically deleted by the script — only the latest version remains
+3. **Validate the output:**
+   - Confirm the new version is strictly greater than the previous version (e.g. v9 > v8)
+   - Confirm ONLY the latest export files remain in `ai/exports/` — no older versions
+   - Confirm exactly these three files exist for the new version:
+     - `ai/exports/repo-pack-full-vN.md`
+     - `ai/exports/repo-pack-core-vN.md`
+     - `ai/exports/changes-summary-vN.md`
+4. **Print the result:**
+   - Previous version (e.g. v8)
+   - New version (e.g. v9)
+   - Exact filenames of the 3 generated files
+5. **STOP immediately** — do NOT commit the exports (they are git-ignored)
 6. Print:
    - previous version
    - new version

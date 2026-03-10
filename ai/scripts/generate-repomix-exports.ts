@@ -195,6 +195,33 @@ if (nextVersion <= previousVersion) {
 // Delete old versions now that new version is verified
 deleteOldVersions(nextVersion);
 
+// Verify old versions were actually removed
+const remainingFiles = readdirSync(EXPORTS_DIR);
+const staleFiles = remainingFiles.filter(f => {
+  const match = EXPORT_PATTERN.exec(f);
+  return match && parseInt(match[1], 10) !== nextVersion;
+});
+
+if (staleFiles.length > 0) {
+  console.error('\nERROR: Old export versions still remain after cleanup:');
+  for (const f of staleFiles) {
+    console.error(`  - ${f}`);
+  }
+  process.exit(1);
+}
+
+// Verify only the expected 3 files remain for the new version
+const expectedFiles = [
+  `repo-pack-full-v${nextVersion}.md`,
+  `repo-pack-core-v${nextVersion}.md`,
+  `changes-summary-v${nextVersion}.md`,
+];
+const actualExportFiles = remainingFiles.filter(f => EXPORT_PATTERN.test(f));
+if (actualExportFiles.length !== expectedFiles.length) {
+  console.error(`\nERROR: Expected ${expectedFiles.length} export files, found ${actualExportFiles.length}`);
+  process.exit(1);
+}
+
 console.log('');
 console.log('----------------------------------------');
 console.log('Repomix export successful');
@@ -210,5 +237,5 @@ console.log(`ai/exports/repo-pack-full-v${nextVersion}.md`);
 console.log(`ai/exports/repo-pack-core-v${nextVersion}.md`);
 console.log(`ai/exports/changes-summary-v${nextVersion}.md`);
 console.log('');
-console.log('Old export versions deleted successfully.');
+console.log('Validation passed: only latest version remains.');
 console.log('----------------------------------------');

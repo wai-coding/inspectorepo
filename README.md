@@ -231,14 +231,18 @@ See [examples/sample-report.md](./examples/sample-report.md) for a full analysis
 
 ## GitHub Action
 
-InspectoRepo runs automatically on every pull request via a GitHub Actions workflow. The workflow:
+InspectoRepo runs automatically on every pull request via the `.github/workflows/inspectorepo-analysis.yml` workflow. It can also be triggered manually via `workflow_dispatch`. Steps:
 
-1. Checks out the code
-2. Installs dependencies and builds all packages
-3. Runs `inspectorepo analyze` on the repository source
-4. Uploads the generated Markdown report as a build artifact
+1. Checks out the repository
+2. Sets up Node.js 20
+3. Installs dependencies and builds all packages
+4. Runs the analysis:
+   ```bash
+   node packages/cli/dist/index.js analyze . --dirs packages,apps --format md --out inspectorepo-report.md
+   ```
+5. Uploads `inspectorepo-report.md` as a build artifact (retained 30 days)
 
-You can also trigger it manually via `workflow_dispatch`. Download the `inspectorepo-report` artifact from the Actions tab to see the full analysis.
+Download the `inspectorepo-report` artifact from the Actions tab to see the full analysis.
 
 ## Roadmap
 

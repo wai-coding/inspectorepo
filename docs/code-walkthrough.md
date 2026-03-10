@@ -47,7 +47,7 @@ This document guides all rule implementation work.
 ### `scripts/generate-repomix-exports.ts`
 
 Node script (run via `npm run repopack`) that:
-1. Scans `ai/exports/` for existing versioned filenames (e.g. `repo-pack-full-v6.md`)
+1. Scans `ai/exports/` for existing versioned filenames (e.g. `repo-pack-full-v8.md`)
 2. Finds the highest version number N present
 3. Computes `nextVersion = N + 1` (starts at v1 if no files exist)
 4. Runs `npx repomix` twice — once for a full pack, once for a core-only pack (excludes docs/screenshots/.github)
@@ -59,6 +59,7 @@ Node script (run via `npm run repopack`) that:
 7. Verifies all 3 files exist; exits with code 1 if any are missing
 8. Verifies the new version is strictly greater than the previous highest version
 9. Deletes all older export versions — only the latest set remains
+10. **Post-cleanup verification** — scans exports dir again and fails with `process.exit(1)` if any stale versioned files remain or the file count is unexpected
 
 No tracked state file is used. The version is derived entirely from existing export filenames.
 
@@ -348,7 +349,14 @@ The report artifact can be downloaded from the Actions tab for each PR.
 
 ### How milestone versioning works
 
-The version is derived from filenames already present in `ai/exports/`. Each `npm run repopack` run scans for the highest existing version number and increments by one. No tracked state file is used — this avoids version resets when git clean or git reset happens. The generated exports live in `ai/exports/` which is git-ignored — they are never committed. After generation, the script validates the new version is strictly greater than the previous one, then deletes all older export versions so only the latest set remains. After each milestone merge, run `npm run repopack` and upload the outputs to ChatGPT for review.
+The version is derived from filenames already present in `ai/exports/`. Each `npm run repopack` run scans for the highest existing version number and increments by one. No tracked state file is used — this avoids version resets when git clean or git reset happens. The generated exports live in `ai/exports/` which is git-ignored — they are never committed. After generation, the script:
+
+1. Validates the new version is strictly greater than the previous one
+2. Deletes all older export versions
+3. Verifies no stale versioned files remain (fails with `process.exit(1)` if cleanup was incomplete)
+4. Confirms exactly 3 export files exist for the new version
+
+After each milestone merge, run `npm run repopack` and upload the outputs to ChatGPT for review.
 
 ### Full vs Core repo pack
 
