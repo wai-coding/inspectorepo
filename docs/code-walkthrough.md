@@ -44,24 +44,21 @@ This document guides all rule implementation work.
 
 ## `ai/`
 
-### `repomix-state.json`
-
-Tracked version counter for repomix exports. Contains `{ "currentVersion": N }`. Incremented by the export script after each generation.
-
 ### `scripts/generate-repomix-exports.ts`
 
 Node script (run via `npm run repopack`) that:
-1. Reads `ai/repomix-state.json` to get the current version
-2. Computes `nextVersion = currentVersion + 1`
-3. Runs `npx repomix` twice — once for a full pack, once for a core-only pack (excludes docs/screenshots/.github)
-4. Gathers git info: last 10 commits, files changed, latest merge
-5. Writes three files under `ai/exports/`:
+1. Scans `ai/exports/` for existing versioned filenames (e.g. `repo-pack-full-v6.md`)
+2. Finds the highest version number N present
+3. Computes `nextVersion = N + 1` (starts at v1 if no files exist)
+4. Runs `npx repomix` twice — once for a full pack, once for a core-only pack (excludes docs/screenshots/.github)
+5. Gathers git info: last 10 commits, files changed, latest merge
+6. Writes three files under `ai/exports/`:
    - `repo-pack-full-vN.md` — full repository pack
    - `repo-pack-core-vN.md` — core-only pack
    - `changes-summary-vN.md` — milestone summary with PR links and commit log
-6. Updates `ai/repomix-state.json` with the new version
+7. Verifies all 3 files exist; exits with code 1 if any are missing
 
-The generated files under `ai/exports/` are git-ignored and never committed.
+No tracked state file is used. The version is derived entirely from existing export filenames.
 
 ### `exports/`
 
@@ -331,7 +328,7 @@ Dark theme with CSS custom properties. Styles for: layout, top bar (summary badg
 
 ### How milestone versioning works
 
-The version counter lives in `ai/repomix-state.json` (tracked in git). Each `npm run repopack` run increments it. The generated exports live in `ai/exports/` which is git-ignored — they are never committed. After each milestone merge, run `npm run repopack` and upload the outputs to ChatGPT for review.
+The version is derived from filenames already present in `ai/exports/`. Each `npm run repopack` run scans for the highest existing version number and increments by one. No tracked state file is used — this avoids version resets when git clean or git reset happens. The generated exports live in `ai/exports/` which is git-ignored — they are never committed. After each milestone merge, run `npm run repopack` and upload the outputs to ChatGPT for review.
 
 ### Full vs Core repo pack
 

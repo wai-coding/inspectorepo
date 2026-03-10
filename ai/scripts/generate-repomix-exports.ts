@@ -1,18 +1,29 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..', '..');
-const STATE_PATH = join(ROOT, 'ai', 'repomix-state.json');
 const EXPORTS_DIR = join(ROOT, 'ai', 'exports');
 
-// Read current version
-const state = JSON.parse(readFileSync(STATE_PATH, 'utf-8')) as {
-  currentVersion: number;
-};
-const nextVersion = state.currentVersion + 1;
+// Derive version from existing export filenames
+function getHighestVersion(): number {
+  if (!existsSync(EXPORTS_DIR)) return 0;
+  const files = readdirSync(EXPORTS_DIR);
+  const versionPattern = /^(?:repo-pack-full|repo-pack-core|changes-summary)-v(\d+)\.md$/;
+  let highest = 0;
+  for (const f of files) {
+    const match = versionPattern.exec(f);
+    if (match) {
+      const n = parseInt(match[1], 10);
+      if (n > highest) highest = n;
+    }
+  }
+  return highest;
+}
+
+const nextVersion = getHighestVersion() + 1;
 
 console.log(`Generating repomix exports v${nextVersion}...`);
 
@@ -138,7 +149,7 @@ ${filesChanged}
 npm run repopack
 \`\`\`
 
-This reads \`ai/repomix-state.json\`, increments the version, runs repomix, and writes:
+This scans \`ai/exports/\` for existing versioned files, increments the version, runs repomix, and writes:
 - \`ai/exports/repo-pack-full-vN.md\` — full repository pack
 - \`ai/exports/repo-pack-core-vN.md\` — core-only pack (no docs/screenshots/.github)
 - \`ai/exports/changes-summary-vN.md\` — this file
@@ -159,9 +170,6 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-// Update state only after all files verified
-writeFileSync(STATE_PATH, JSON.stringify({ currentVersion: nextVersion }, null, 2) + '\n', 'utf-8');
-
 console.log('');
 console.log('----------------------------------------');
 console.log('Repomix export successful');
@@ -171,6 +179,6 @@ console.log(`ai/exports/repo-pack-full-v${nextVersion}.md`);
 console.log(`ai/exports/repo-pack-core-v${nextVersion}.md`);
 console.log(`ai/exports/changes-summary-v${nextVersion}.md`);
 console.log('');
-console.log('Version updated to:');
+console.log('New version number:');
 console.log(`v${nextVersion}`);
 console.log('----------------------------------------');
