@@ -1,4 +1,4 @@
-import { writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,14 +7,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..', '..');
 const EXPORTS_DIR = join(ROOT, 'ai', 'exports');
 
+const EXPORT_PATTERN = /^(?:repo-pack-full|repo-pack-core|changes-summary)-v(\d+)\.md$/;
+
 // Derive version from existing export filenames
 function getHighestVersion(): number {
   if (!existsSync(EXPORTS_DIR)) return 0;
   const files = readdirSync(EXPORTS_DIR);
-  const versionPattern = /^(?:repo-pack-full|repo-pack-core|changes-summary)-v(\d+)\.md$/;
   let highest = 0;
   for (const f of files) {
-    const match = versionPattern.exec(f);
+    const match = EXPORT_PATTERN.exec(f);
     if (match) {
       const n = parseInt(match[1], 10);
       if (n > highest) highest = n;
@@ -23,7 +24,22 @@ function getHighestVersion(): number {
   return highest;
 }
 
-const nextVersion = getHighestVersion() + 1;
+// Delete all export files that don't match the given version
+function deleteOldVersions(keepVersion: number): void {
+  const files = readdirSync(EXPORTS_DIR);
+  for (const f of files) {
+    const match = EXPORT_PATTERN.exec(f);
+    if (match) {
+      const n = parseInt(match[1], 10);
+      if (n !== keepVersion) {
+        unlinkSync(join(EXPORTS_DIR, f));
+      }
+    }
+  }
+}
+
+const previousVersion = getHighestVersion();
+const nextVersion = previousVersion + 1;
 
 console.log(`Generating repomix exports v${nextVersion}...`);
 
@@ -170,15 +186,29 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
+// Verify new version is strictly greater than previous
+if (nextVersion <= previousVersion) {
+  console.error(`\nERROR: New version (v${nextVersion}) is not greater than previous version (v${previousVersion})`);
+  process.exit(1);
+}
+
+// Delete old versions now that new version is verified
+deleteOldVersions(nextVersion);
+
 console.log('');
 console.log('----------------------------------------');
 console.log('Repomix export successful');
+console.log('');
+console.log('Previous version:');
+console.log(previousVersion > 0 ? `v${previousVersion}` : '(none)');
+console.log('');
+console.log('New version:');
+console.log(`v${nextVersion}`);
 console.log('');
 console.log('Generated files:');
 console.log(`ai/exports/repo-pack-full-v${nextVersion}.md`);
 console.log(`ai/exports/repo-pack-core-v${nextVersion}.md`);
 console.log(`ai/exports/changes-summary-v${nextVersion}.md`);
 console.log('');
-console.log('New version number:');
-console.log(`v${nextVersion}`);
+console.log('Old export versions deleted successfully.');
 console.log('----------------------------------------');
