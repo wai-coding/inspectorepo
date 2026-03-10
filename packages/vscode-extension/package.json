@@ -1,0 +1,29 @@
+{
+  "name": "@inspectorepo/vscode-extension",
+  "displayName": "InspectoRepo",
+  "description": "Run InspectoRepo analysis directly inside VS Code",
+  "version": "0.1.0",
+  "private": true,
+  "publisher": "inspectorepo",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Linters"],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "inspectorepo.runAnalysis",
+        "title": "InspectoRepo: Run Analysis"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^25.3.5"
+  }
+}

@@ -53,6 +53,6 @@ export default [
     },
   },
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/*.js', '**/*.mjs', 'examples/fixture-repo/**', 'screenshots/*.ts', 'examples/*.ts', 'ai/scripts/*.ts'],
+    ignores: ['**/dist/**', '**/node_modules/**', '**/*.js', '**/*.mjs', 'examples/fixture-repo/**', 'screenshots/*.ts', 'examples/*.ts', 'ai/scripts/*.ts', 'packages/vscode-extension/**'],
   },
 ];
