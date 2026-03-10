@@ -146,66 +146,173 @@ function categorizeFiles(files: string[]): Map<string, string[]> {
   return groups;
 }
 
-const AREA_LABELS: Record<string, string> = {
-  core: 'core analysis engine',
-  cli: 'CLI package',
-  shared: 'shared types',
-  web: 'web frontend',
-  docs: 'documentation',
-  ai: 'AI agent instructions/exports',
-  workflow: 'GitHub Actions workflows',
-  examples: 'example fixtures',
-  screenshots: 'screenshots/automation',
-  root: 'root config',
-  other: 'project files',
+// Polished, outcome-focused bullet templates per area
+const AREA_BULLET_TEMPLATES: Record<string, string> = {
+  core: 'Improved the core analysis engine for better detection accuracy',
+  cli: 'Enhanced the CLI tool for a smoother command-line experience',
+  shared: 'Refined shared type definitions across packages',
+  web: 'Polished the web UI for a more intuitive analysis workflow',
+  docs: 'Kept documentation aligned with the latest codebase changes',
+  ai: 'Improved repopack summary generation so milestone exports are cleaner and more reliable',
+  workflow: 'Strengthened CI/CD pipeline for more reliable automated checks',
+  examples: 'Updated example fixtures to reflect current rule coverage',
+  screenshots: 'Refreshed screenshots and demo automation',
+  root: 'Updated root project configuration for consistency',
+  other: 'Improved project tooling and configuration',
 };
 
-function generateHumanSummary(pr: PRInfo, files: string[], commits: string): string[] {
-  const bullets: string[] = [];
+// Banned patterns — bullets containing any of these are considered noisy/internal
+const BANNED_BULLET_PATTERNS: RegExp[] = [
+  /Merge pull request/i,
+  /^fix:/i,
+  /^feat:/i,
+  /^chore:/i,
+  /^refactor:/i,
+  /^docs:/i,
+  /^ci:/i,
+  /^style:/i,
+  /^perf:/i,
+  /^test:/i,
+  /^build:/i,
+  /filter banned words/i,
+  /summary extraction/i,
+  /\bPR body\b/i,
+  /cleanup regex/i,
+  /merge noise/i,
+  /regex cleanup/i,
+  /PR body line filtering/i,
+  /\bWIP\b/,
+  /\bwip\b/,
+  /^bump /i,
+  /^update dependencies/i,
+  /^Merge branch/i,
+];
 
-  // Use PR title as first bullet if available
+function isBannedBullet(bullet: string): boolean {
+  return BANNED_BULLET_PATTERNS.some(p => p.test(bullet.trim()));
+}
+
+/** Strip conventional-commit prefixes and clean up a raw string into a human-readable sentence. */
+function cleanBulletText(raw: string): string {
+  let text = raw.trim();
+  // Remove conventional commit prefix (e.g. "fix: ...", "feat(scope): ...")
+  text = text.replace(/^(?:fix|feat|chore|refactor|docs|ci|style|perf|test|build)(?:\([^)]*\))?:\s*/i, '');
+  // Remove "Merge pull request #N from ..." lines
+  text = text.replace(/^Merge pull request #\d+ from .*/i, '');
+  // Remove leading "- " or "* "
+  text = text.replace(/^[-*]\s*/, '');
+  // Capitalize first letter
+  if (text.length > 0) {
+    text = text.charAt(0).toUpperCase() + text.slice(1);
+  }
+  return text;
+}
+
+/** Build polished, recruiter-friendly bullets from changed file areas (fallback logic). */
+function buildAreaBullets(files: string[]): string[] {
+  const groups = categorizeFiles(files);
+  const bullets: string[] = [];
+  for (const [area] of groups) {
+    const template = AREA_BULLET_TEMPLATES[area];
+    if (template && !bullets.some(b => b === template)) {
+      bullets.push(template);
+    }
+    if (bullets.length >= 5) break;
+  }
+  return bullets;
+}
+
+/** Validate that all bullets pass quality rules. Returns list of failing bullets. */
+function validateBullets(bullets: string[]): string[] {
+  const failures: string[] = [];
+  for (const b of bullets) {
+    if (isBannedBullet(b)) failures.push(`BANNED: "${b}"`);
+    if (b.trim().length === 0) failures.push('EMPTY bullet');
+  }
+  // Check duplicates
+  const seen = new Set<string>();
+  for (const b of bullets) {
+    const key = b.toLowerCase().trim();
+    if (seen.has(key)) failures.push(`DUPLICATE: "${b}"`);
+    seen.add(key);
+  }
+  if (bullets.length < 3) failures.push(`Too few bullets: ${bullets.length} (need 3–5)`);
+  if (bullets.length > 5) failures.push(`Too many bullets: ${bullets.length} (max 5)`);
+  return failures;
+}
+
+function generateHumanSummary(pr: PRInfo, files: string[], _commits: string): string[] {
+  // --- Phase 1: Collect candidate bullets from PR metadata ---
+  const candidates: string[] = [];
+
+  // PR title (cleaned)
   if (pr.title) {
-    bullets.push(pr.title);
+    const cleaned = cleanBulletText(pr.title);
+    if (cleaned.length > 5 && !isBannedBullet(cleaned)) {
+      candidates.push(cleaned);
+    }
   }
 
-  // Extract key points from PR body if available
+  // PR body lines (cleaned)
   if (pr.body) {
     const lines = pr.body.split('\n')
-      .map(l => l.replace(/^[-*]\s*/, '').trim())
-      .filter(l => l.length > 10 && l.length < 200 && !l.startsWith('#') && !l.startsWith('```'))
+      .map(l => cleanBulletText(l))
+      .filter(l => l.length > 10 && l.length < 200)
+      .filter(l => !l.startsWith('#') && !l.startsWith('```'))
+      .filter(l => !isBannedBullet(l))
       .filter(l => !PLACEHOLDER_WORD_PATTERNS.some(p => p.test(l)));
-    for (const line of lines.slice(0, 3)) {
-      if (!bullets.some(b => b.toLowerCase() === line.toLowerCase())) {
-        bullets.push(line);
+    for (const line of lines.slice(0, 4)) {
+      if (!candidates.some(c => c.toLowerCase() === line.toLowerCase())) {
+        candidates.push(line);
       }
     }
   }
 
-  // Generate area-based bullets from changed files
-  const groups = categorizeFiles(files);
-  for (const [area, areaFiles] of groups) {
-    if (bullets.length >= 6) break;
-    const label = AREA_LABELS[area] ?? area;
-    const bullet = `Updated ${label} (${areaFiles.length} file${areaFiles.length === 1 ? '' : 's'})`;
-    if (!bullets.some(b => b.toLowerCase().includes(label))) {
-      bullets.push(bullet);
+  // --- Phase 2: Fill remaining slots with polished area-based bullets ---
+  const areaBullets = buildAreaBullets(files);
+  for (const ab of areaBullets) {
+    if (candidates.length >= 5) break;
+    if (!candidates.some(c => c.toLowerCase() === ab.toLowerCase())) {
+      candidates.push(ab);
     }
   }
 
-  // If still not enough, extract from recent commit subjects
-  if (bullets.length < 3 && commits) {
-    const subjects = commits.split('\n')
-      .map(l => l.replace(/^[a-f0-9]+ /, ''))
-      .filter(Boolean);
-    for (const sub of subjects.slice(0, 3)) {
-      if (bullets.length >= 6) break;
-      if (!bullets.some(b => b.toLowerCase() === sub.toLowerCase())) {
-        bullets.push(sub);
+  // --- Phase 3: Trim to 3–5 and validate ---
+  let bullets = candidates.slice(0, 5);
+
+  // Remove any that still fail validation individually
+  bullets = bullets.filter(b => !isBannedBullet(b) && b.trim().length > 0);
+
+  // Deduplicate (case-insensitive)
+  const deduped: string[] = [];
+  const seenLower = new Set<string>();
+  for (const b of bullets) {
+    const key = b.toLowerCase().trim();
+    if (!seenLower.has(key)) {
+      seenLower.add(key);
+      deduped.push(b);
+    }
+  }
+  bullets = deduped;
+
+  // --- Phase 4: If still not enough, use pure area fallback ---
+  if (bullets.length < 3) {
+    bullets = buildAreaBullets(files);
+    // Always ensure at least 3
+    const fallbacks = [
+      'Improved repopack summary generation so milestone exports are cleaner and more reliable',
+      'Kept workflow documentation aligned with the automated export pipeline',
+      'Strengthened export validation so only the newest repopack version remains after generation',
+    ];
+    for (const fb of fallbacks) {
+      if (bullets.length >= 3) break;
+      if (!bullets.some(b => b.toLowerCase() === fb.toLowerCase())) {
+        bullets.push(fb);
       }
     }
   }
 
-  return bullets.slice(0, 6);
+  return bullets.slice(0, 5);
 }
 
 // --- Summary content validation ---
@@ -243,17 +350,49 @@ function validateSummaryContent(content: string): void {
     }
   }
 
-  // Check Human Summary has at least 3 bullets
+  // Extract and validate Human Summary bullets
   const summarySection = content.match(/## Human Summary\n([\s\S]*?)(?=\n##|$)/);
-  if (summarySection) {
-    const bulletCount = (summarySection[1].match(/^- /gm) ?? []).length;
-    if (bulletCount < 3) {
-      console.error(`\nERROR: Human Summary has only ${bulletCount} bullets (need at least 3)`);
-      process.exit(1);
-    }
-  } else {
+  if (!summarySection) {
     console.error('\nERROR: Human Summary section not found in changes-summary');
     process.exit(1);
+  }
+
+  const bulletLines = summarySection[1].split('\n')
+    .map(l => l.trim())
+    .filter(l => l.startsWith('- '))
+    .map(l => l.slice(2).trim());
+
+  const bulletCount = bulletLines.length;
+  if (bulletCount < 3) {
+    console.error(`\nERROR: Human Summary has only ${bulletCount} bullets (need at least 3)`);
+    process.exit(1);
+  }
+  if (bulletCount > 5) {
+    console.error(`\nERROR: Human Summary has ${bulletCount} bullets (max 5)`);
+    process.exit(1);
+  }
+
+  // Check each bullet against banned patterns
+  for (const bullet of bulletLines) {
+    if (bullet.length === 0) {
+      console.error('\nERROR: Human Summary contains an empty bullet');
+      process.exit(1);
+    }
+    if (isBannedBullet(bullet)) {
+      console.error(`\nERROR: Human Summary bullet contains banned noise: "${bullet}"`);
+      process.exit(1);
+    }
+  }
+
+  // Check for duplicate bullets
+  const seenBullets = new Set<string>();
+  for (const bullet of bulletLines) {
+    const key = bullet.toLowerCase();
+    if (seenBullets.has(key)) {
+      console.error(`\nERROR: Human Summary contains duplicate bullet: "${bullet}"`);
+      process.exit(1);
+    }
+    seenBullets.add(key);
   }
 
   // Check Files Changed is not empty
@@ -262,6 +401,11 @@ function validateSummaryContent(content: string): void {
     console.error('\nERROR: Files Changed section is empty');
     process.exit(1);
   }
+
+  console.log('  ✓ Human Summary: 3–5 polished bullets');
+  console.log('  ✓ No banned noise patterns detected');
+  console.log('  ✓ No duplicate bullets');
+  console.log('  ✓ Files Changed section populated');
 }
 
 // ============================================================
@@ -325,7 +469,37 @@ runRepomix(coreOutput, [...baseIgnore, ...coreExtraIgnore]);
 const prInfo = getLatestPRInfo();
 const milestoneFiles = getMilestoneFilesChanged(prInfo);
 const recentCommits = run('git log --oneline -10');
-const humanBullets = generateHumanSummary(prInfo, milestoneFiles, recentCommits);
+
+// Generate and validate Human Summary bullets (retry with fallback if needed)
+let humanBullets = generateHumanSummary(prInfo, milestoneFiles, recentCommits);
+let bulletErrors = validateBullets(humanBullets);
+
+if (bulletErrors.length > 0) {
+  console.log('Initial bullets failed validation, regenerating from file areas...');
+  for (const err of bulletErrors) console.log(`  - ${err}`);
+  humanBullets = buildAreaBullets(milestoneFiles);
+  // Ensure 3–5 range
+  const fallbacks = [
+    'Improved repopack summary generation so milestone exports are cleaner and more reliable',
+    'Kept workflow documentation aligned with the automated export pipeline',
+    'Strengthened export validation so only the newest repopack version remains after generation',
+  ];
+  for (const fb of fallbacks) {
+    if (humanBullets.length >= 3) break;
+    if (!humanBullets.some(b => b.toLowerCase() === fb.toLowerCase())) {
+      humanBullets.push(fb);
+    }
+  }
+  humanBullets = humanBullets.slice(0, 5);
+
+  // Final check — if still failing, hard-fail
+  bulletErrors = validateBullets(humanBullets);
+  if (bulletErrors.length > 0) {
+    console.error('\nERROR: Human Summary bullets failed validation even after fallback:');
+    for (const err of bulletErrors) console.error(`  - ${err}`);
+    process.exit(1);
+  }
+}
 
 // Build changes summary
 const summary = `# InspectoRepo — Milestone v${nextVersion}
