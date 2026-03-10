@@ -65,21 +65,21 @@ git push --force-with-lease origin dev
 
 After EVERY PR merge into main (end of milestone):
 
-1. Sync local `main`: `git fetch origin && git checkout main && git pull`
-2. Run: `npm run repopack`
-3. Confirm `ai/repomix-state.json` was incremented by 1
-4. Confirm these three files now exist under `ai/exports/`:
+1. Run: `npm run repopack`
+2. The script determines the new version automatically from filenames already present in `ai/exports/`
+3. Confirm these three files now exist under `ai/exports/`:
    - `ai/exports/repo-pack-full-vN.md`
    - `ai/exports/repo-pack-core-vN.md`
    - `ai/exports/changes-summary-vN.md`
+4. Print the exact filenames generated
 5. **STOP immediately** — do NOT commit the exports (they are git-ignored)
 6. Tell the user to upload all three files to ChatGPT for full review
 
-The version counter lives in `ai/repomix-state.json` (tracked). The exports live in `ai/exports/` (ignored).
+No tracked state file is used. The version is derived from the highest version number found in existing export filenames. If no exports exist, the script starts at v1.
 
 ### Enforcement Rules
 
-> **The task is NOT complete until the repopack export files for the new version exist and the version counter was incremented.**
+> **The task is NOT complete until the new export files exist with a version number higher than the previously existing exports.**
 
 > **Do not describe the task as finished until you print the exact generated filenames.**
 
@@ -171,7 +171,7 @@ Input:
 - [ ] PR merged into `main`
 - [ ] `dev` synced with `main`
 - [ ] `npm run repopack` executed
-- [ ] Version incremented in `ai/repomix-state.json`
+- [ ] New version derived from `ai/exports/` filenames
 - [ ] `ai/exports/repo-pack-full-vN.md` exists
 - [ ] `ai/exports/repo-pack-core-vN.md` exists
 - [ ] `ai/exports/changes-summary-vN.md` exists
@@ -187,7 +187,7 @@ A task is NOT considered finished until ALL of the following conditions are sati
 1. The PR has been merged into main.
 2. The local dev branch has been synced with main.
 3. The command `npm run repopack` has been executed.
-4. The value `currentVersion` in `ai/repomix-state.json` increased by exactly +1.
+4. The new version number is higher than any previously existing export version.
 5. The following files exist in `ai/exports/` with that new version number:
 
    - `repo-pack-full-vN.md`
