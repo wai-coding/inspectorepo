@@ -4,6 +4,35 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-10 — M12 finalization: workflow validation, prompt-master cleanup, docs alignment
+
+### What was implemented
+
+- **Verified `inspectorepo-analysis.yml`** — confirmed the GitHub Action workflow file exists and meets all requirements: triggers on `pull_request` and `workflow_dispatch`, uses `ubuntu-latest`, Node 20 with npm cache, builds all packages, runs `node packages/cli/dist/index.js analyze . --dirs packages,apps --format md --out inspectorepo-report.md`, and uploads the report as an artifact retained for 30 days.
+- **Prompt-master cleanup** (`ai/prompt-master.md`) — removed redundant post-merge steps (steps 4–8 had duplicate "print results" and "STOP" instructions). Consolidated the "Final Mandatory Checklist" and "Non-negotiable completion rule" sections into a single "Completion Rule" section. The post-merge workflow now has 8 clear non-redundant steps: merge → sync → determine version → repopack → validate version → validate files → print → stop.
+- **README alignment** — updated CI pipeline Key Feature to mention both workflows (lint/typecheck/build/test CI plus automated InspectoRepo analysis on PRs). Verified all other claims match reality.
+- **Code walkthrough update** — added explicit "Post-merge workflow" subsection under the Repomix Workflow section documenting the 8-step post-merge process.
+
+### Why
+
+The prompt-master had duplicate instructions that could confuse an AI agent (two separate "STOP" directives, two separate "print results" steps, three overlapping completion checks). Consolidating these into a single clear workflow prevents ambiguity. The README and docs needed to accurately reflect the current state of both CI workflows.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+### Design decisions
+
+- **Single completion rule** — merged the checklist and non-negotiable rule into one section to eliminate redundancy while preserving strictness.
+- **8-step post-merge flow** — matches the exact sequence an agent should follow, with no repeated or contradictory instructions.
+
+---
+
 ## 2026-03-10 — Final review fixes, repopack hardening, Quickdraw attempt
 
 ### What was implemented

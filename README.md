@@ -16,7 +16,7 @@ Manual code review is time-consuming and inconsistent. InspectoRepo provides det
 - **Markdown export** — download a full analysis report as `.md`
 - **Exclude rules** — automatically skips `node_modules`, `dist`, `build`, `.git`, hidden dirs, and other noise
 - **Monorepo architecture** — npm workspaces with `shared`, `core`, and `web` packages
-- **CI pipeline** — GitHub Actions running lint, typecheck, build, and test on every push/PR
+- **CI pipeline** — GitHub Actions running lint, typecheck, build, and test on every push/PR, plus automated InspectoRepo analysis on pull requests
 
 ## Implemented Rules
 
