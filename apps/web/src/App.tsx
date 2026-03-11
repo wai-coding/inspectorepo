@@ -14,6 +14,7 @@ export function App() {
     handleAnalyze,
     selectIssue,
     exportMarkdown,
+    loadSampleProject,
   } = useAppState();
 
   return (
@@ -39,6 +40,7 @@ export function App() {
           report={state.report}
           selectedIssue={state.selectedIssue}
           onSelectIssue={selectIssue}
+          onLoadSample={loadSampleProject}
         />
         <DetailsPanel issue={state.selectedIssue} />
       </div>

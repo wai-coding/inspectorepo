@@ -4,6 +4,55 @@ import { buildDirectoryTree, pickDefaultDirs, analyzeCodebase, buildMarkdownRepo
 import type { DirEntry } from '@inspectorepo/core';
 import { selectFolderViaAPI, readUploadedFiles, processFiles } from './folder-reader';
 
+// Small inline sample for "Try with sample project"
+const SAMPLE_FILES: VirtualFile[] = [
+  {
+    path: 'src/utils.ts',
+    content: [
+      'import { Logger } from "./logger";',
+      '',
+      'export function getUser(data: any) {',
+      '  if (data && data.user && data.user.name) {',
+      '    return data.user.name;',
+      '  }',
+      '  return null;',
+      '}',
+      '',
+      'export function isActive(flag: boolean) {',
+      '  if (flag === true) {',
+      '    return true;',
+      '  }',
+      '  return false;',
+      '}',
+    ].join('\n'),
+  },
+  {
+    path: 'src/process.ts',
+    content: [
+      'export function processItems(items: number[]) {',
+      '  if (items.length > 0) {',
+      '    for (let i = 0; i < items.length; i++) {',
+      '      if (items[i] > 0) {',
+      '        if (items[i] > 10) {',
+      '          for (let j = 0; j < items[i]; j++) {',
+      '            if (j % 2 === 0) {',
+      '              const val = j > 5 ? j * 2 : j;',
+      '              if (val > 3 && val < 100 || val === 0) {',
+      '                console.log(val);',
+      '              }',
+      '            }',
+      '          }',
+      '        }',
+      '      }',
+      '    }',
+      '  }',
+      '  debugger;',
+      '  return;',
+      '}',
+    ].join('\n'),
+  },
+];
+
 export interface AppState {
   folderName: string | null;
   allFiles: VirtualFile[];
@@ -116,6 +165,10 @@ export function useAppState() {
 
   const canAnalyze = state.folderName !== null && state.selectedDirs.length > 0;
 
+  const loadSampleProject = useCallback(() => {
+    loadFolder('sample-project', SAMPLE_FILES);
+  }, [loadFolder]);
+
   // Dev-only: expose loader for E2E / screenshot automation
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -132,5 +185,6 @@ export function useAppState() {
     handleAnalyze,
     selectIssue,
     exportMarkdown,
+    loadSampleProject,
   };
 }
