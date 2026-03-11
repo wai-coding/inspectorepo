@@ -4,6 +4,36 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-11 — V3 Platform Milestone
+
+### What was implemented
+
+- **Roadmap restructure** — README roadmap reorganized into V1 (Foundation), V2 (Automation), V3 (Platform/current), V4 (Planned). Completed features moved to correct sections.
+- **CHANGELOG.md** — introduced structured changelog covering v1, v2, and v3 milestones.
+- **Summary-only CLI mode** — `inspectorepo analyze --summary-only` prints score, total issues, and severity counts without listing individual issues. Ideal for CI speed.
+- **VS Code extension UX** — extension now auto-opens the generated report and shows a notification with an "Open Report" action button.
+- **Web app About section** — new "About InspectoRepo" section explains the tool and its Preview status.
+- **Web app empty state** — improved "no issues" message: "Great! No issues detected." with explanation.
+- **Fixture data** — added React component fixture, monorepo sample fixture, and custom rule example fixture.
+- **PR comment improvements** — enhanced summary includes top 3 rules by issue count and top affected package.
+- **Lightweight export mode** — new `repo-pack-latest-vN.md` export containing structure + core files + latest summary without historical logs.
+- **Export grouping** — Files Changed now sorted and grouped by area.
+
+### Why
+
+V3 brings platform-level capabilities: improved development workflows, better onboarding UX, richer automation feedback, and more realistic test data.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+---
+
 ## 2026-03-11 — M20: Fix Preview Mode
 
 ### What was implemented
