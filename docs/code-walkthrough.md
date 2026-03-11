@@ -114,6 +114,10 @@ Sample TypeScript files designed to trigger all 4 implemented rules when analyze
 - `src/user-utils.ts` — optional chaining (3 guard chains) + boolean simplification (5 patterns)
 - `src/formatters.ts` — clean utility file (import target, no issues)
 
+### `custom-rule-no-console.ts`
+
+Example custom rule using `defineRule()` from `@inspectorepo/core`. Detects `console.log/warn/error` calls via ts-morph AST traversal. Demonstrates the custom rule API pattern for user-defined rules.
+
 ### `generate-report.ts`
 
 Node script that collects fixture files, runs `analyzeCodebase()`, and writes `sample-report.md`. Uses `readFileSync` + `readdirSync` to walk the fixture directory.
@@ -203,6 +207,10 @@ interface Rule { id: string; title: string; severity: Severity; run(ctx: RuleCon
 
 `buildMarkdownReport(report)` — produces full markdown with header, summary table (with severity emojis 🔴🟡🔵), issues table (emoji column), and per-file detail sections. Each issue shows `emoji **SEVERITY** — \`ruleId\` (line N)`, a `> 💡` suggestion prefix, and collapsible `<details>` blocks for proposed diffs. Issues in the same file are separated by `---` horizontal rules. Prefers `proposedDiff` over `proposedPatch`.
 
+### `src/report-parser.ts`
+
+`parseReportSummary(markdown)` — parses the markdown summary table produced by `buildMarkdownReport()` and returns a `ReportSummary` object with `score`, `totalIssues`, `errors`, `warnings`, and `info` counts. Iterates over table rows `| key | value |`, strips emoji prefixes, and extracts numeric values. Returns `null` if the table is missing or any required field cannot be parsed — callers should use a safe fallback message.
+
 ### `src/scanner.ts`
 
 File filtering utilities: `isAnalyzableFile(name)` and `filterAnalyzableFiles(names)`.
@@ -256,11 +264,24 @@ Detects unnecessary block-style early returns. Looks for `IfStatement` nodes whe
 
 Suggests collapsing `if (cond) { return; }` into `if (cond) return;`. Produces a `proposedDiff` showing the simplified form.
 
+### `src/custom-rule.ts`
+
+`defineRule(definition)` — factory function for creating custom rules compatible with the analysis engine. Accepts a `CustomRuleDefinition` object (id, title, severity, run function) and returns a `Rule`. Custom rules can be passed into `analyzeCodebase()` via `options.customRules` and run alongside built-in rules.
+
+### `src/presets.ts`
+
+Rule preset system:
+- `resolvePreset(name)` — returns a `RuleConfig` for the given preset name, or null for unknown presets
+- `isValidPreset(name)` — type guard checking if a string is a valid `PresetName`
+- `getPresetNames()` — returns the list of available preset names
+
+Presets: `recommended` (all warn), `strict` (unused-imports + complexity at error), `cleanup` (complexity off, style rules on), `react` (unused-imports at error for TS+React projects).
+
 ### `src/config.ts`
 
 Rule configuration loader:
-- `parseConfig(json)` — parses `.inspectorepo.json` content, returns `InspectorepoConfig` or null
-- `mergeConfig(loaded)` — merges loaded config with defaults (all rules default to `warn`)
+- `parseConfig(json)` — parses `.inspectorepo.json` content, returns `InspectorepoConfig` or null. Now also reads the optional `preset` field.
+- `mergeConfig(loaded, preset?)` — merges loaded config with defaults. If a preset is provided, its values serve as the base before applying explicit rule overrides.
 - `filterRulesByConfig(rules, config)` — filters and optionally overrides severity based on config
 - `cliRulesToConfig(cliRules, allRuleIds)` — converts `--rules` CLI flag value into a config object
 
@@ -389,7 +410,7 @@ GitHub Action that runs InspectoRepo analysis on pull requests (and manual `work
 2. Install dependencies and build all packages
 3. Run `node packages/cli/dist/index.js analyze . --dirs packages,apps --format md --out inspectorepo-report.md`
 4. Upload the generated report as an artifact (`inspectorepo-report`)
-5. **PR comment bot** — on pull request events, uses `actions/github-script@v7` to parse the report (score, total issues, severity counts via regex), then posts or updates a summary comment on the PR. Uses an HTML marker comment (`<!-- inspectorepo-analysis -->`) to find and update a previous bot comment, avoiding duplicates.
+5. **PR comment bot** — on pull request events, uses `actions/github-script@v7` to parse the markdown summary table (row-by-row extraction matching the `| Metric | Value |` format from `buildMarkdownReport()`), then posts or updates a summary comment on the PR. If parsing fails, posts a safe fallback message instead of incorrect numbers. Uses an HTML marker comment (`<!-- inspectorepo-analysis -->`) to find and update a previous bot comment, avoiding duplicates.
 
 The report artifact can be downloaded from the Actions tab for each PR. The summary comment provides instant visibility without downloading.
 

@@ -46,38 +46,65 @@ jobs:
             const fs = require('fs');
             const report = fs.readFileSync('inspectorepo-report.md', 'utf-8');
 
-            // Extract score
-            const scoreMatch = report.match(/Score:\s*(\d+)\s*\/\s*100/);
-            const score = scoreMatch ? scoreMatch[1] : '?';
+            // Parse the markdown summary table produced by buildMarkdownReport()
+            // Table format:
+            // | Metric | Value |
+            // |---|---|
+            // | Score | **82/100** |
+            // | Total issues | 5 |
+            // | 🔴 Errors | 1 |
+            // | 🟡 Warnings | 2 |
+            // | 🔵 Info | 2 |
+            const tableRows = new Map();
+            for (const line of report.split('\n')) {
+              const m = line.match(/^\|\s*(.+?)\s*\|\s*(.+?)\s*\|$/);
+              if (m) {
+                const key = m[1].replace(/^[🔴🟡🔵]\s*/, '').trim().toLowerCase();
+                tableRows.set(key, m[2].trim());
+              }
+            }
 
-            // Extract total issues
-            const totalMatch = report.match(/Total Issues:\s*(\d+)/i) || report.match(/(\d+)\s+issue/i);
-            const totalIssues = totalMatch ? totalMatch[1] : '0';
+            const scoreRaw = tableRows.get('score');
+            const scoreMatch = scoreRaw && scoreRaw.match(/\*{0,2}(\d+)\s*\/\s*100\*{0,2}/);
+            const totalRaw = tableRows.get('total issues');
+            const errorsRaw = tableRows.get('errors');
+            const warningsRaw = tableRows.get('warnings');
+            const infoRaw = tableRows.get('info');
 
-            // Extract severity counts from the summary table
-            const errorMatch = report.match(/Errors?[:\s|]*(\d+)/i);
-            const warnMatch = report.match(/Warnings?[:\s|]*(\d+)/i);
-            const infoMatch = report.match(/Info[:\s|]*(\d+)/i);
-
-            const errors = errorMatch ? errorMatch[1] : '0';
-            const warnings = warnMatch ? warnMatch[1] : '0';
-            const infos = infoMatch ? infoMatch[1] : '0';
+            const parsed = scoreMatch && totalRaw && errorsRaw && warningsRaw && infoRaw;
 
             const marker = '<!-- inspectorepo-analysis -->';
-            const body = [
-              marker,
-              '## 🔍 InspectoRepo Analysis',
-              '',
-              `| Metric | Value |`,
-              `|--------|-------|`,
-              `| Score | **${score}/100** |`,
-              `| Total Issues | ${totalIssues} |`,
-              `| 🔴 Errors | ${errors} |`,
-              `| 🟡 Warnings | ${warnings} |`,
-              `| 🔵 Info | ${infos} |`,
-              '',
-              '> Full report available as a workflow artifact.',
-            ].join('\n');
+            let body;
+
+            if (parsed) {
+              const score = scoreMatch[1];
+              const totalIssues = totalRaw;
+              const errors = errorsRaw;
+              const warnings = warningsRaw;
+              const infos = infoRaw;
+
+              body = [
+                marker,
+                '## 🔍 InspectoRepo Analysis',
+                '',
+                '| Metric | Value |',
+                '|--------|-------|',
+                `| Score | **${score}/100** |`,
+                `| Total Issues | ${totalIssues} |`,
+                `| 🔴 Errors | ${errors} |`,
+                `| 🟡 Warnings | ${warnings} |`,
+                `| 🔵 Info | ${infos} |`,
+                '',
+                '> Full report available as a workflow artifact.',
+              ].join('\n');
+            } else {
+              body = [
+                marker,
+                '## 🔍 InspectoRepo Analysis',
+                '',
+                'InspectoRepo analysis completed. Full report is available as a workflow artifact.',
+              ].join('\n');
+            }
 
             // Find and update existing bot comment, or create new one
             const { data: comments } = await github.rest.issues.listComments({

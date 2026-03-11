@@ -4,6 +4,99 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-11 — M18: Rule Presets
+
+### What was implemented
+
+- **Preset system** (`packages/core/src/presets.ts`) — four curated rule presets: `recommended`, `strict`, `cleanup`, `react`. Each preset defines a `RuleConfig` with appropriate severity levels. Functions: `resolvePreset()`, `isValidPreset()`, `getPresetNames()`.
+- **Config integration** — `parseConfig()` now reads the optional `preset` field from `.inspectorepo.json`. `mergeConfig()` accepts an optional preset name and uses it as the base before applying explicit rule overrides.
+- **CLI `--preset` flag** — the CLI now accepts `--preset <name>` to select a preset. CLI `--preset` overrides config file preset; explicit `--rules` still takes full priority.
+- **Tests** (`packages/core/src/presets.test.ts`) — 11 tests covering preset resolution, validation, listing, mergeConfig with preset defaults, explicit override over preset, and invalid preset fallback.
+- **Public exports** — `resolvePreset`, `isValidPreset`, `getPresetNames`, and `PresetName` exported from `@inspectorepo/core`.
+
+### Why
+
+Presets improve UX by providing sensible defaults for common use cases (strict CI, cleanup passes, React projects) without requiring users to manually configure each rule. This is a natural complement to the custom rule API (M17).
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+### Design decisions
+
+- **Four presets** — `recommended` (safe defaults), `strict` (CI/production), `cleanup` (refactoring passes), `react` (TS+React focus). Covers the most common use cases without over-specializing.
+- **Preset as base, explicit rules override** — matches how ESLint extends work. Users start with a preset and fine-tune individual rules.
+- **Invalid preset falls back to defaults** — typos or unknown presets don’t crash; they silently use the default config.
+- **CLI `--rules` still takes full priority** — when `--rules` is specified, presets and config files are ignored. This matches existing behavior.
+
+---
+
+## 2026-03-11 — M17: Custom Rule API
+
+### What was implemented
+
+- **`defineRule()` API** (`packages/core/src/custom-rule.ts`) — a simple function that accepts a `CustomRuleDefinition` (id, title, severity, run) and returns a `Rule` compatible with the analysis engine.
+- **`customRules` option** in `analyzeCodebase()` — the analyzer now accepts `options.customRules` and appends them to the built-in (or configured) rule set.
+- **Example rule** (`examples/custom-rule-no-console.ts`) — a `no-console` rule that detects `console.log/warn/error` calls using ts-morph AST traversal.
+- **Tests** (`packages/core/src/custom-rule.test.ts`) — covers `defineRule` returning a valid rule, custom rules running during analysis, emitting issues correctly, and combining with built-in rules.
+- **Public exports** — `defineRule` and `CustomRuleDefinition` exported from `@inspectorepo/core`.
+
+### Why
+
+Allowing users to define their own rules makes InspectoRepo extensible. This is the first step toward a plugin ecosystem — custom rules are passed programmatically, keeping the implementation simple and stable.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+### Design decisions
+
+- **`defineRule()` over class-based** — a simple factory function is more approachable and aligns with the existing `Rule` interface.
+- **`customRules` appended, not replacing** — custom rules are added alongside built-in rules, not as replacements. This matches user expectations.
+- **No plugin loading from disk** — first version is programmatic only. Loading from npm/disk adds complexity that isn't needed yet.
+
+---
+
+## 2026-03-11 — M16: Robust Report Parser for PR Comment Bot
+
+### What was implemented
+
+- **Report parser** (`packages/core/src/report-parser.ts`) — a reusable utility that extracts score, total issues, errors, warnings, and info counts from the markdown summary table produced by `buildMarkdownReport()`. Parses the actual `| Metric | Value |` table structure instead of relying on loose regex.
+- **Parser tests** (`packages/core/src/report-parser.test.ts`) — covers normal report, empty/no-issues report, malformed input fallback, partial table, and score without bold markers.
+- **Robust PR comment bot** (`.github/workflows/inspectorepo-analysis.yml`) — replaced fragile regex parsing with table-row extraction matching the actual report format. Added safe fallback: if parsing fails, the bot posts a generic "analysis completed" message instead of incorrect numbers.
+- **Public export** — `parseReportSummary` and `ReportSummary` exported from `@inspectorepo/core`.
+
+### Why
+
+The previous PR comment bot used regex patterns like `Score:\s*(\d+)\s*/\s*100` that didn't match the actual markdown table format (`| Score | **82/100** |`). This caused the bot to show `?` for score and `0` for all severity counts. The new parser correctly handles the table format and fails gracefully on unexpected input.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+### Design decisions
+
+- **Table-row parsing over regex** — the report uses a markdown table, so parsing rows is more reliable than pattern-matching free text.
+- **Safe fallback** — if any expected field is missing, the parser returns null and the bot posts a generic message. No incorrect numbers are ever shown.
+- **Core package placement** — the parser lives in `packages/core` alongside `report.ts` since it parses the output of `buildMarkdownReport()`. This allows reuse from CLI, web, or other consumers.
+
+---
+
 ## 2026-03-11 — M15: PR Comment Bot, Preview Badge, Next Milestone Fix
 
 ### What was implemented

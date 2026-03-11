@@ -1,4 +1,5 @@
 import type { Rule } from './rule.js';
+import { resolvePreset } from './presets.js';
 
 export type RuleSeverityConfig = 'error' | 'warn' | 'off';
 
@@ -7,6 +8,7 @@ export interface RuleConfig {
 }
 
 export interface InspectorepoConfig {
+  preset?: string;
   rules: RuleConfig;
 }
 
@@ -25,10 +27,13 @@ const DEFAULT_CONFIG: RuleConfig = {
 export function parseConfig(json: string): InspectorepoConfig | null {
   try {
     const parsed = JSON.parse(json) as Partial<InspectorepoConfig>;
-    if (parsed.rules && typeof parsed.rules === 'object') {
-      return { rules: parsed.rules as RuleConfig };
-    }
-    return null;
+    const hasRules = parsed.rules && typeof parsed.rules === 'object';
+    const hasPreset = typeof parsed.preset === 'string';
+    if (!hasRules && !hasPreset) return null;
+    return {
+      ...(hasPreset ? { preset: parsed.preset } : {}),
+      rules: (hasRules ? parsed.rules : {}) as RuleConfig,
+    };
   } catch {
     return null;
   }
@@ -36,11 +41,19 @@ export function parseConfig(json: string): InspectorepoConfig | null {
 
 /**
  * Merge a loaded config with defaults.
- * Rules not listed in the config keep their default severity.
+ * If a preset is provided and valid, its values serve as defaults.
+ * Explicit rule config overrides preset values.
  */
-export function mergeConfig(loaded: RuleConfig | null): RuleConfig {
-  if (!loaded) return { ...DEFAULT_CONFIG };
-  return { ...DEFAULT_CONFIG, ...loaded };
+export function mergeConfig(loaded: RuleConfig | null, preset?: string): RuleConfig {
+  const base = { ...DEFAULT_CONFIG };
+  if (preset) {
+    const presetConfig = resolvePreset(preset);
+    if (presetConfig) {
+      Object.assign(base, presetConfig);
+    }
+  }
+  if (!loaded) return base;
+  return { ...base, ...loaded };
 }
 
 /**
