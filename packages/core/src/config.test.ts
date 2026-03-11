@@ -6,6 +6,19 @@ import {
   cliRulesToConfig,
 } from './config.js';
 import { allRules } from './rules/index.js';
+import { resolvePreset, getPresetNames } from './presets.js';
+
+const ALL_RULE_IDS = [
+  'unused-imports',
+  'complexity-hotspot',
+  'optional-chaining',
+  'boolean-simplification',
+  'early-return',
+  'no-debugger',
+  'no-empty-catch',
+  'no-useless-return',
+  'ts-diagnostics',
+];
 
 describe('parseConfig', () => {
   it('parses a valid config', () => {
@@ -51,6 +64,39 @@ describe('mergeConfig', () => {
   });
 });
 
+describe('DEFAULT_CONFIG contains all rules', () => {
+  it('has every registered rule in defaults', () => {
+    const defaults = mergeConfig(null);
+    for (const id of ALL_RULE_IDS) {
+      expect(defaults).toHaveProperty(id);
+      expect(['error', 'warn', 'off']).toContain(defaults[id]);
+    }
+  });
+
+  it('rule registry matches expected rule IDs', () => {
+    const registryIds = allRules.map((r) => r.id).sort();
+    expect(registryIds).toEqual([...ALL_RULE_IDS].sort());
+  });
+
+  it('no rule exists in registry but not in DEFAULT_CONFIG', () => {
+    const defaults = mergeConfig(null);
+    for (const rule of allRules) {
+      expect(defaults).toHaveProperty(rule.id);
+    }
+  });
+});
+
+describe('presets produce valid configs', () => {
+  it.each(getPresetNames())('preset "%s" contains all rule IDs', (presetName) => {
+    const config = resolvePreset(presetName);
+    expect(config).not.toBeNull();
+    for (const id of ALL_RULE_IDS) {
+      expect(config).toHaveProperty(id);
+      expect(['error', 'warn', 'off']).toContain(config![id]);
+    }
+  });
+});
+
 describe('filterRulesByConfig', () => {
   it('removes rules set to off', () => {
     const config = {
@@ -77,6 +123,18 @@ describe('filterRulesByConfig', () => {
     const rule = filtered.find((r) => r.id === 'unused-imports');
     expect(rule?.severity).toBe('error');
   });
+
+  it('returns only active rules from a full config', () => {
+    const defaults = mergeConfig(null);
+    const filtered = filterRulesByConfig(allRules, defaults);
+    // ts-diagnostics is 'off' in defaults, so it should be excluded
+    expect(filtered.find((r) => r.id === 'ts-diagnostics')).toBeUndefined();
+    // All other rules should be present
+    for (const rule of allRules) {
+      if (rule.id === 'ts-diagnostics') continue;
+      expect(filtered.find((r) => r.id === rule.id)).toBeDefined();
+    }
+  });
 });
 
 describe('cliRulesToConfig', () => {
@@ -94,5 +152,14 @@ describe('cliRulesToConfig', () => {
     const config = cliRulesToConfig('early-return', ids);
     expect(config['early-return']).toBe('warn');
     expect(config['unused-imports']).toBe('off');
+  });
+
+  it('sets all rules to off or warn', () => {
+    const ids = allRules.map((r) => r.id);
+    const config = cliRulesToConfig('no-debugger', ids);
+    for (const id of ids) {
+      expect(['warn', 'off']).toContain(config[id]);
+    }
+    expect(config['no-debugger']).toBe('warn');
   });
 });
