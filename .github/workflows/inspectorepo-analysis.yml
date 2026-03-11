@@ -90,12 +90,21 @@ jobs:
 
               // Top rules
               if (parsed.topRules && parsed.topRules.length > 0) {
-                lines.push('### 🏷️ Top Rules');
+                lines.push('### 🏷️ Top Rules by Issue Count');
                 lines.push('');
                 for (const r of parsed.topRules) {
                   lines.push(`- \`${r.rule}\` — ${r.count} issue(s)`);
                 }
                 lines.push('');
+              }
+
+              // Top affected package
+              if (parsed.packages && parsed.packages.length > 0) {
+                const topPkg = parsed.packages.slice().sort((a, b) => b.issues - a.issues)[0];
+                if (topPkg && topPkg.issues > 0) {
+                  lines.push(`**Top affected package:** ${topPkg.name} (${topPkg.issues} issues)`);
+                  lines.push('');
+                }
               }
 
               lines.push('> Full report available as a workflow artifact.');
