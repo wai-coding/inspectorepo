@@ -4,6 +4,36 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-11 — M16: Robust Report Parser for PR Comment Bot
+
+### What was implemented
+
+- **Report parser** (`packages/core/src/report-parser.ts`) — a reusable utility that extracts score, total issues, errors, warnings, and info counts from the markdown summary table produced by `buildMarkdownReport()`. Parses the actual `| Metric | Value |` table structure instead of relying on loose regex.
+- **Parser tests** (`packages/core/src/report-parser.test.ts`) — covers normal report, empty/no-issues report, malformed input fallback, partial table, and score without bold markers.
+- **Robust PR comment bot** (`.github/workflows/inspectorepo-analysis.yml`) — replaced fragile regex parsing with table-row extraction matching the actual report format. Added safe fallback: if parsing fails, the bot posts a generic "analysis completed" message instead of incorrect numbers.
+- **Public export** — `parseReportSummary` and `ReportSummary` exported from `@inspectorepo/core`.
+
+### Why
+
+The previous PR comment bot used regex patterns like `Score:\s*(\d+)\s*/\s*100` that didn't match the actual markdown table format (`| Score | **82/100** |`). This caused the bot to show `?` for score and `0` for all severity counts. The new parser correctly handles the table format and fails gracefully on unexpected input.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+### Design decisions
+
+- **Table-row parsing over regex** — the report uses a markdown table, so parsing rows is more reliable than pattern-matching free text.
+- **Safe fallback** — if any expected field is missing, the parser returns null and the bot posts a generic message. No incorrect numbers are ever shown.
+- **Core package placement** — the parser lives in `packages/core` alongside `report.ts` since it parses the output of `buildMarkdownReport()`. This allows reuse from CLI, web, or other consumers.
+
+---
+
 ## 2026-03-11 — M15: PR Comment Bot, Preview Badge, Next Milestone Fix
 
 ### What was implemented

@@ -203,6 +203,10 @@ interface Rule { id: string; title: string; severity: Severity; run(ctx: RuleCon
 
 `buildMarkdownReport(report)` — produces full markdown with header, summary table (with severity emojis 🔴🟡🔵), issues table (emoji column), and per-file detail sections. Each issue shows `emoji **SEVERITY** — \`ruleId\` (line N)`, a `> 💡` suggestion prefix, and collapsible `<details>` blocks for proposed diffs. Issues in the same file are separated by `---` horizontal rules. Prefers `proposedDiff` over `proposedPatch`.
 
+### `src/report-parser.ts`
+
+`parseReportSummary(markdown)` — parses the markdown summary table produced by `buildMarkdownReport()` and returns a `ReportSummary` object with `score`, `totalIssues`, `errors`, `warnings`, and `info` counts. Iterates over table rows `| key | value |`, strips emoji prefixes, and extracts numeric values. Returns `null` if the table is missing or any required field cannot be parsed — callers should use a safe fallback message.
+
 ### `src/scanner.ts`
 
 File filtering utilities: `isAnalyzableFile(name)` and `filterAnalyzableFiles(names)`.
@@ -389,7 +393,7 @@ GitHub Action that runs InspectoRepo analysis on pull requests (and manual `work
 2. Install dependencies and build all packages
 3. Run `node packages/cli/dist/index.js analyze . --dirs packages,apps --format md --out inspectorepo-report.md`
 4. Upload the generated report as an artifact (`inspectorepo-report`)
-5. **PR comment bot** — on pull request events, uses `actions/github-script@v7` to parse the report (score, total issues, severity counts via regex), then posts or updates a summary comment on the PR. Uses an HTML marker comment (`<!-- inspectorepo-analysis -->`) to find and update a previous bot comment, avoiding duplicates.
+5. **PR comment bot** — on pull request events, uses `actions/github-script@v7` to parse the markdown summary table (row-by-row extraction matching the `| Metric | Value |` format from `buildMarkdownReport()`), then posts or updates a summary comment on the PR. If parsing fails, posts a safe fallback message instead of incorrect numbers. Uses an HTML marker comment (`<!-- inspectorepo-analysis -->`) to find and update a previous bot comment, avoiding duplicates.
 
 The report artifact can be downloaded from the Actions tab for each PR. The summary comment provides instant visibility without downloading.
 
