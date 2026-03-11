@@ -43,8 +43,16 @@ export interface AnalysisMeta {
   analyzedDirectories: string[];
 }
 
+export interface PackageGroup {
+  name: string;
+  issueCount: number;
+  bySeverity: Record<Severity, number>;
+  score: number;
+}
+
 export interface AnalysisReport {
   summary: AnalysisSummary;
   issues: Issue[];
   meta: AnalysisMeta;
+  packageGroups?: PackageGroup[];
 }

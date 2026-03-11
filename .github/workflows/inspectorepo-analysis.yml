@@ -29,7 +29,7 @@ jobs:
         run: npm run build
 
       - name: Run InspectoRepo analysis
-        run: node packages/cli/dist/index.js analyze . --dirs packages,apps --format md --out inspectorepo-report.md
+        run: node packages/cli/dist/index.js analyze . --dirs packages,apps --group-by package --format md --out inspectorepo-report.md
 
       - name: Upload analysis report
         uses: actions/upload-artifact@v4
@@ -50,13 +50,18 @@ jobs:
         with:
           script: |
             const raw = '${{ steps.summary.outputs.json }}';
-            const parsed = raw && raw !== 'null' ? JSON.parse(raw) : null;
+            let parsed;
+            try {
+              parsed = raw && raw !== 'null' ? JSON.parse(raw) : null;
+            } catch {
+              parsed = null;
+            }
 
             const marker = '<!-- inspectorepo-analysis -->';
             let body;
 
             if (parsed) {
-              body = [
+              const lines = [
                 marker,
                 '## 🔍 InspectoRepo Analysis',
                 '',
@@ -68,14 +73,39 @@ jobs:
                 `| 🟡 Warnings | ${parsed.warnings} |`,
                 `| 🔵 Info | ${parsed.info} |`,
                 '',
-                '> Full report available as a workflow artifact.',
-              ].join('\n');
+              ];
+
+              // Package highlights
+              if (parsed.packages && parsed.packages.length > 0) {
+                lines.push('### 📦 Package Highlights');
+                lines.push('');
+                lines.push('| Package | Score | Issues |');
+                lines.push('|---------|-------|--------|');
+                for (const pkg of parsed.packages) {
+                  const icon = pkg.score >= 80 ? '✅' : pkg.score >= 50 ? '⚠️' : '🔴';
+                  lines.push(`| ${icon} ${pkg.name} | **${pkg.score}/100** | ${pkg.issues} |`);
+                }
+                lines.push('');
+              }
+
+              // Top rules
+              if (parsed.topRules && parsed.topRules.length > 0) {
+                lines.push('### 🏷️ Top Rules');
+                lines.push('');
+                for (const r of parsed.topRules) {
+                  lines.push(`- \`${r.rule}\` — ${r.count} issue(s)`);
+                }
+                lines.push('');
+              }
+
+              lines.push('> Full report available as a workflow artifact.');
+              body = lines.join('\n');
             } else {
               body = [
                 marker,
                 '## 🔍 InspectoRepo Analysis',
                 '',
-                'InspectoRepo analysis completed. Full report is available as a workflow artifact.',
+                '⚠️ Could not parse the analysis summary. Full report is available as a workflow artifact.',
               ].join('\n');
             }
 

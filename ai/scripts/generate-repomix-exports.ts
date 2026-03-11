@@ -207,6 +207,9 @@ const BANNED_BULLET_PATTERNS: RegExp[] = [
   /\bpatterns?\s+match/i,
   /\.ts[x]?[:\s]/i,
   /Checks? passed/i,
+  // Milestone-title-style bullets (e.g. "M19 Web UI improvements")
+  /^M\d+\b/i,
+  /\bM\d+\b.*\bM\d+\b/i,
 ];
 
 function isBannedBullet(bullet: string): boolean {
@@ -233,6 +236,8 @@ function cleanBulletText(raw: string): string {
   let text = raw.trim();
   // Remove conventional commit prefix (e.g. "fix: ...", "feat(scope): ...")
   text = text.replace(/^(?:fix|feat|chore|refactor|docs|ci|style|perf|test|build)(?:\([^)]*\))?:\s*/i, '');
+  // Remove milestone references like "M19", "(M19)", "M19 —"
+  text = text.replace(/\(?M\d+\)?[:\s—-]*/gi, '').trim();
   // Remove "Merge pull request #N from ..." lines
   text = text.replace(/^Merge pull request #\d+ from .*/i, '');
   // Remove leading "- " or "* "
@@ -495,8 +500,10 @@ const ROADMAP: RoadmapItem[] = [
   { label: 'Rule presets for common project types', implemented: true },
   { label: 'Web UI improvements with expandable issue details', implemented: true },
   { label: 'Fix preview mode for safe dry-run inspection', implemented: true },
-  { label: 'Stronger auto-fix engine with broader rule coverage', implemented: false },
+  { label: 'Stronger auto-fix engine with detailed skip reporting', implemented: false },
   { label: 'Monorepo-aware analysis with per-package reports', implemented: false },
+  { label: 'HTML report export for standalone sharing', implemented: false },
+  { label: 'Enhanced PR comment summaries with package highlights', implemented: false },
 ];
 
 function generateNextMilestoneSection(): string {

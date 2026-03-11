@@ -1,4 +1,4 @@
-import type { AnalysisReport, Issue, VirtualFile } from '@inspectorepo/shared';
+import type { AnalysisReport, Issue, VirtualFile, PackageGroup, Severity } from '@inspectorepo/shared';
 import { Project } from 'ts-morph';
 import type { Rule } from './rule.js';
 import { allRules } from './rules/index.js';
@@ -33,7 +33,43 @@ export interface AnalyzeInput {
     ruleConfig?: RuleConfig;
     ignorePatterns?: string[];
     customRules?: Rule[];
+    groupBy?: 'package';
   };
+}
+
+/** Extract the top-level directory (package) from a file path. */
+function extractPackageName(filePath: string): string {
+  const parts = filePath.split('/');
+  // paths like "packages/core/src/foo.ts" → "packages/core"
+  // paths like "apps/web/src/App.tsx" → "apps/web"
+  // paths like "src/foo.ts" → "src"
+  if (parts.length >= 2 && (parts[0] === 'packages' || parts[0] === 'apps')) {
+    return `${parts[0]}/${parts[1]}`;
+  }
+  return parts[0];
+}
+
+/** Group issues by monorepo package and compute per-package scores. */
+export function groupIssuesByPackage(issues: Issue[]): PackageGroup[] {
+  const map = new Map<string, Issue[]>();
+  for (const issue of issues) {
+    const pkg = extractPackageName(issue.filePath);
+    const arr = map.get(pkg) ?? [];
+    arr.push(issue);
+    map.set(pkg, arr);
+  }
+
+  const groups: PackageGroup[] = [];
+  for (const [name, pkgIssues] of map) {
+    const bySeverity: Record<Severity, number> = { error: 0, warn: 0, info: 0 };
+    for (const issue of pkgIssues) {
+      bySeverity[issue.severity]++;
+    }
+    const score = computeScore(pkgIssues).score;
+    groups.push({ name, issueCount: pkgIssues.length, bySeverity, score });
+  }
+
+  return groups.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function analyzeCodebase(input: AnalyzeInput): AnalysisReport {
@@ -124,5 +160,6 @@ export function analyzeCodebase(input: AnalyzeInput): AnalysisReport {
       analyzedFilesCount: filesToAnalyze.length,
       analyzedDirectories: Array.from(dirSet).sort(),
     },
+    ...(options?.groupBy === 'package' ? { packageGroups: groupIssuesByPackage(sorted) } : {}),
   };
 }

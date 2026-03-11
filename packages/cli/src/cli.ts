@@ -4,6 +4,7 @@ import { createInterface } from 'node:readline';
 import {
   analyzeCodebase,
   buildMarkdownReport,
+  buildHtmlReport,
   allRules,
   parseConfig,
   mergeConfig,
@@ -12,17 +13,19 @@ import {
 } from '@inspectorepo/core';
 import type { RuleConfig } from '@inspectorepo/core';
 import { readFilesFromDisk, parseDirs, filterByDirs } from './fs-reader.js';
-import { isAutoFixable, applyFix, formatFixPreview, formatPreviewReport } from './fixer.js';
+import { applyFix, formatFixPreview, formatPreviewReport, buildFixPlan, computeFixSummary, formatFixSummary, formatSkipReason } from './fixer.js';
+import type { FixResult } from './fixer.js';
 
 interface CliOptions {
   path: string;
   dirs: string[];
-  format: 'md' | 'json';
+  format: 'md' | 'json' | 'html';
   out?: string;
   maxIssues?: number;
   rules?: string;
   preset?: string;
   preview?: boolean;
+  groupBy?: 'package';
 }
 
 function printUsage(): void {
@@ -37,7 +40,8 @@ Options:
   --rules <rules>      Comma-separated rules to run (e.g. optional-chaining,unused-imports)
   --preset <name>      Rule preset: recommended, strict, cleanup, react
   --preview            Show proposed fixes without modifying files (fix only)
-  --format <md|json>   Output format (default: md) (analyze only)
+  --group-by <type>    Group issues by package (monorepo, analyze only)
+  --format <fmt>       Output format: md, json, html (default: md) (analyze only)
   --out <file>         Write output to file instead of stdout (analyze only)
   --max-issues <n>     Limit number of issues reported (analyze only)
   --help               Show this help message
@@ -84,11 +88,21 @@ function parseArgs(args: string[]): CliOptions | null {
       case '--preview':
         opts.preview = true;
         break;
+      case '--group-by':
+        {
+          const gb = args[++i];
+          if (gb !== 'package') {
+            console.error(`Invalid group-by value: ${gb}. Use "package".`);
+            return null;
+          }
+          opts.groupBy = gb;
+        }
+        break;
       case '--format':
         {
           const fmt = args[++i];
-          if (fmt !== 'md' && fmt !== 'json') {
-            console.error(`Invalid format: ${fmt}. Use "md" or "json".`);
+          if (fmt !== 'md' && fmt !== 'json' && fmt !== 'html') {
+            console.error(`Invalid format: ${fmt}. Use "md", "json", or "html".`);
             return null;
           }
           opts.format = fmt;
@@ -193,43 +207,59 @@ async function runFix(args: string[]): Promise<void> {
     },
   });
 
-  const fixable = report.issues.filter(isAutoFixable);
-  if (fixable.length === 0) {
+  const plan = buildFixPlan(report.issues);
+  if (plan.fixable.length === 0) {
     console.log('No auto-fixable issues found.');
     return;
   }
 
   // Preview mode: show proposed fixes without modifying files
   if (opts.preview) {
-    console.log(formatPreviewReport(fixable));
+    console.log(formatPreviewReport(plan.fixable));
+    const previewResults: FixResult[] = plan.fixable.map(issue => ({
+      filePath: issue.filePath,
+      ruleId: issue.ruleId,
+      line: issue.range.start.line,
+      applied: false,
+      skipped: false,
+    }));
+    const summary = computeFixSummary(previewResults);
+    console.log(formatFixSummary(summary, 'preview'));
     return;
   }
 
-  console.log(`Found ${fixable.length} auto-fixable issue(s):\n`);
+  console.log(`Found ${plan.fixable.length} auto-fixable issue(s):\n`);
 
-  let applied = 0;
-  let skipped = 0;
+  const results: FixResult[] = [];
 
-  for (const issue of fixable) {
+  for (const issue of plan.fixable) {
     console.log(formatFixPreview(issue));
     const answer = await ask('Apply fix? (y/N) ');
 
     if (answer === 'y' || answer === 'yes') {
       const result = applyFix(rootDir, issue);
+      results.push(result);
       if (result.applied) {
         console.log(`  ✓ Fixed ${issue.filePath}:${issue.range.start.line}\n`);
-        applied++;
       } else {
-        console.log('  ✗ Could not apply fix (source may have changed)\n');
-        skipped++;
+        const reason = formatSkipReason(result.skipReason);
+        console.log(`  ✗ Skipped: ${reason}\n`);
       }
     } else {
+      results.push({
+        filePath: issue.filePath,
+        ruleId: issue.ruleId,
+        line: issue.range.start.line,
+        applied: false,
+        skipped: true,
+        skipReason: undefined,
+      });
       console.log('  Skipped.\n');
-      skipped++;
     }
   }
 
-  console.log(`\nDone: ${applied} fix(es) applied, ${skipped} skipped.`);
+  const summary = computeFixSummary(results);
+  console.log(formatFixSummary(summary, 'applied'));
 }
 
 export function run(args: string[]): void {
@@ -298,6 +328,7 @@ export function run(args: string[]): void {
     options: {
       ...(ruleConfig ? { ruleConfig } : {}),
       ...(ignorePatterns ? { ignorePatterns } : {}),
+      ...(opts.groupBy ? { groupBy: opts.groupBy } : {}),
     },
   });
 
@@ -309,6 +340,8 @@ export function run(args: string[]): void {
   let output: string;
   if (opts.format === 'json') {
     output = JSON.stringify(report, null, 2);
+  } else if (opts.format === 'html') {
+    output = buildHtmlReport(report);
   } else {
     output = buildMarkdownReport(report);
   }

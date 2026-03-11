@@ -8,4 +8,5 @@ export type {
   AnalysisSummary,
   AnalysisMeta,
   AnalysisReport,
+  PackageGroup,
 } from './types.js';
