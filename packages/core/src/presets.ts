@@ -9,6 +9,10 @@ const PRESETS: Record<PresetName, RuleConfig> = {
     'optional-chaining': 'warn',
     'boolean-simplification': 'warn',
     'early-return': 'warn',
+    'no-debugger': 'warn',
+    'no-empty-catch': 'warn',
+    'no-useless-return': 'warn',
+    'ts-diagnostics': 'off',
   },
   strict: {
     'unused-imports': 'error',
@@ -16,6 +20,10 @@ const PRESETS: Record<PresetName, RuleConfig> = {
     'optional-chaining': 'warn',
     'boolean-simplification': 'warn',
     'early-return': 'warn',
+    'no-debugger': 'error',
+    'no-empty-catch': 'error',
+    'no-useless-return': 'warn',
+    'ts-diagnostics': 'error',
   },
   cleanup: {
     'unused-imports': 'warn',
@@ -23,6 +31,10 @@ const PRESETS: Record<PresetName, RuleConfig> = {
     'optional-chaining': 'warn',
     'boolean-simplification': 'warn',
     'early-return': 'warn',
+    'no-debugger': 'warn',
+    'no-empty-catch': 'warn',
+    'no-useless-return': 'warn',
+    'ts-diagnostics': 'off',
   },
   react: {
     'unused-imports': 'error',
@@ -30,6 +42,10 @@ const PRESETS: Record<PresetName, RuleConfig> = {
     'optional-chaining': 'warn',
     'boolean-simplification': 'warn',
     'early-return': 'warn',
+    'no-debugger': 'warn',
+    'no-empty-catch': 'warn',
+    'no-useless-return': 'warn',
+    'ts-diagnostics': 'off',
   },
 };
 

@@ -24,10 +24,14 @@ Manual code review is time-consuming and inconsistent. InspectoRepo provides det
 | Rule | Severity | Description |
 |------|----------|-------------|
 | `unused-imports` | warn | Detects unused import specifiers (default, namespace, named) and suggests removal with a safe proposed patch |
-| `complexity-hotspot` | warn | Flags functions with high cyclomatic-like complexity (≥ 12) and suggests refactoring strategies |
+| `complexity-hotspot` | warn | Flags functions with high cyclomatic-like complexity (≥ 12) with specific contributor breakdown (nested conditionals, loops, ternaries, logical chains) and tailored suggestions |
 | `optional-chaining` | info | Detects monotonic guard chains like `a && a.b && a.b.c` and suggests optional chaining (`a?.b?.c`) |
 | `boolean-simplification` | info | Simplifies `x === true`, `x === false`, `!!x`, and `x ? true : false` patterns |
 | `early-return` | info | Detects unnecessary block-style early returns and suggests single-line guard clauses |
+| `no-debugger` | warn | Detects `debugger` statements left in code — auto-fixable |
+| `no-empty-catch` | warn | Flags empty catch blocks that silently hide errors — report only |
+| `no-useless-return` | info | Detects redundant `return;` at the end of functions — auto-fixable |
+| `ts-diagnostics` | error | Reports high-confidence TypeScript compiler diagnostics (unreachable code, duplicate identifiers, missing names, type mismatches) — report only |
 
 ## Tech Stack
 
@@ -88,6 +92,8 @@ npm test
 | `npm test`            | Run Vitest tests             |
 | `npm run repopack`   | Generate repomix exports     |
 
+> **Export packs:** `npm run repopack` generates four versioned files under `ai/exports/`. Use `repo-pack-latest-vN.md` for a quick lightweight review — it includes project structure and core source without docs, screenshots, or scripts.
+
 ## Demo
 
 Try InspectoRepo locally in three steps:
@@ -140,7 +146,7 @@ Apply safe code fixes interactively:
 inspectorepo fix ./my-project
 ```
 
-The fix command runs analysis, finds issues with safe auto-fix suggestions, shows a preview of each proposed change, and asks for confirmation before applying. Only `optional-chaining`, `boolean-simplification`, and `unused-imports` rules support auto-fix. `complexity-hotspot` is never auto-applied.
+The fix command runs analysis, finds issues with safe auto-fix suggestions, shows a preview of each proposed change, and asks for confirmation before applying. Rules with auto-fix support: `optional-chaining`, `boolean-simplification`, `unused-imports`, `early-return`, `no-debugger`, and `no-useless-return`. Advisory rules like `complexity-hotspot`, `no-empty-catch`, and `ts-diagnostics` are never auto-applied.
 
 ### Fix Preview Mode
 
@@ -196,13 +202,17 @@ The CLI uses the same analysis engine as the web UI. Output is deterministic —
 
 ## Rules
 
-| Rule | Severity | Description |
-|------|----------|-------------|
-| `unused-imports` | warn | Detects unused import specifiers and suggests removal |
-| `complexity-hotspot` | warn | Flags high-complexity functions (≥ 12) with refactor suggestions |
-| `optional-chaining` | info | Suggests `?.` for monotonic guard chains |
-| `boolean-simplification` | info | Simplifies redundant boolean expressions |
-| `early-return` | info | Detects unnecessary block-style early returns |
+| Rule | Severity | Auto-fix | Description |
+|------|----------|----------|-------------|
+| `unused-imports` | warn | ✅ | Detects unused import specifiers and suggests removal |
+| `complexity-hotspot` | warn | ❌ | Flags high-complexity functions with specific contributor breakdown and tailored suggestions |
+| `optional-chaining` | info | ✅ | Suggests `?.` for monotonic guard chains |
+| `boolean-simplification` | info | ✅ | Simplifies redundant boolean expressions |
+| `early-return` | info | ✅ | Detects unnecessary block-style early returns |
+| `no-debugger` | warn | ✅ | Detects `debugger` statements left in code |
+| `no-empty-catch` | warn | ❌ | Flags empty catch blocks that silently hide errors |
+| `no-useless-return` | info | ✅ | Detects redundant `return;` at the end of functions |
+| `ts-diagnostics` | error | ❌ | Reports high-confidence TypeScript compiler diagnostics |
 
 ## Configuration
 
@@ -215,7 +225,11 @@ Create `.inspectorepo.json` in your project root to configure which rules run an
     "unused-imports": "warn",
     "complexity-hotspot": "off",
     "boolean-simplification": "warn",
-    "early-return": "warn"
+    "early-return": "warn",
+    "no-debugger": "warn",
+    "no-empty-catch": "warn",
+    "no-useless-return": "warn",
+    "ts-diagnostics": "off"
   }
 }
 ```

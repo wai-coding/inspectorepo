@@ -158,6 +158,12 @@ export function MainPanel({ report, selectedIssue, onSelectIssue }: MainPanelPro
                       {issue.suggestion.summary}
                     </div>
                   )}
+                  {issue.suggestion.details && (
+                    <div className="issue-expanded-suggestion">
+                      <span className="issue-expanded-suggestion-label">Details:</span>{' '}
+                      {issue.suggestion.details}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

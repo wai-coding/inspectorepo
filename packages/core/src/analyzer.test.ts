@@ -218,7 +218,7 @@ describe('unused-imports rule', () => {
 });
 
 describe('complexity-hotspot rule', () => {
-  it('flags functions above threshold', () => {
+  it('flags functions above threshold with function name and score', () => {
     // Build a function with many branches to exceed threshold of 12
     const code = [
       'export function complex(a: number, b: number, c: boolean) {',
@@ -252,8 +252,52 @@ describe('complexity-hotspot rule', () => {
       options: { rules: [complexityHotspotRule] },
     });
     expect(report.issues.length).toBe(1);
-    expect(report.issues[0].ruleId).toBe('complexity-hotspot');
-    expect(report.issues[0].severity).toBe('warn');
+    const issue = report.issues[0];
+    expect(issue.ruleId).toBe('complexity-hotspot');
+    expect(issue.severity).toBe('warn');
+    // Function name and score must appear in message
+    expect(issue.message).toContain('"complex"');
+    expect(issue.message).toMatch(/\(\d+\)/);
+    // Contributors must appear in details
+    expect(issue.suggestion.details).toMatch(/if statement/);
+    expect(issue.suggestion.details).toMatch(/Complexity score: \d+/);
+    // Suggestion should be specific, not generic
+    expect(issue.suggestion.summary).toMatch(/Consider:/);
+  });
+
+  it('includes contributor counts in details', () => {
+    const code = [
+      'export function branchy(x: number) {',
+      '  if (x > 0) {',
+      '    if (x > 1) {',
+      '      if (x > 2) {',
+      '        for (let i = 0; i < x; i++) {',
+      '          while (i > 0) {',
+      '            if (i % 2 === 0) {',
+      '              console.log(i);',
+      '            }',
+      '          }',
+      '        }',
+      '      }',
+      '    }',
+      '  }',
+      '  const a = x > 0 ? 1 : 0;',
+      '  const b = x > 1 ? 1 : 0;',
+      '  return a || b;',
+      '}',
+    ].join('\n');
+
+    const files = [{ path: 'src/test.ts', content: code }];
+    const report = analyzeCodebase({
+      files,
+      selectedDirectories: ['src'],
+      options: { rules: [complexityHotspotRule] },
+    });
+    expect(report.issues.length).toBe(1);
+    const details = report.issues[0].suggestion.details;
+    expect(details).toContain('if statement');
+    expect(details).toContain('loop');
+    expect(details).toContain('ternary');
   });
 
   it('does not flag simple functions', () => {

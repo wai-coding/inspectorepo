@@ -47,6 +47,21 @@ describe('isAutoFixable', () => {
     expect(isAutoFixable(issue)).toBe(false);
   });
 
+  it('returns true for no-debugger with diff', () => {
+    const issue = makeIssue('no-debugger', '- debugger;');
+    expect(isAutoFixable(issue)).toBe(true);
+  });
+
+  it('returns true for no-useless-return with diff', () => {
+    const issue = makeIssue('no-useless-return', '- return;');
+    expect(isAutoFixable(issue)).toBe(true);
+  });
+
+  it('returns false for no-empty-catch (no auto-fix)', () => {
+    const issue = makeIssue('no-empty-catch');
+    expect(isAutoFixable(issue)).toBe(false);
+  });
+
   it('returns false when no diff is provided', () => {
     const issue = makeIssue('optional-chaining');
     expect(isAutoFixable(issue)).toBe(false);

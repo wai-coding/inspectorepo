@@ -207,9 +207,11 @@ const BANNED_BULLET_PATTERNS: RegExp[] = [
   /\bpatterns?\s+match/i,
   /\.ts[x]?[:\s]/i,
   /Checks? passed/i,
-  // Milestone-title-style bullets (e.g. "M19 Web UI improvements")
+  // Milestone-title-style bullets (e.g. "M19 Web UI improvements", "V3 Platform Milestone")
   /^M\d+\b/i,
   /\bM\d+\b.*\bM\d+\b/i,
+  /^V\d+\s/i,
+  /\bMilestone\b/i,
 ];
 
 function isBannedBullet(bullet: string): boolean {
@@ -521,11 +523,9 @@ const ROADMAP: RoadmapItem[] = [
   { label: 'Summary-only CLI mode for fast CI checks', implemented: true },
   { label: 'Lightweight repo-pack-latest export mode', implemented: true },
   { label: 'Web app onboarding About section and empty state', implemented: true },
+  { label: 'Richer complexity warnings with contributor breakdown', implemented: true },
+  { label: 'Conservative analysis rules (no-debugger, no-empty-catch, no-useless-return, ts-diagnostics)', implemented: true },
   { label: 'Deploy web app as a hosted service', implemented: false },
-  { label: 'Rule dependency graph and cascade analysis', implemented: false },
-  { label: 'Performance profiling for large codebases', implemented: false },
-  { label: 'VS Code extension inline fix suggestions', implemented: false },
-];
   { label: 'Rule dependency graph and cascade analysis', implemented: false },
   { label: 'Performance profiling for large codebases', implemented: false },
   { label: 'VS Code extension inline fix suggestions', implemented: false },
@@ -674,8 +674,8 @@ ${formatGroupedFiles(milestoneFiles)}
 \`\`\`
 
 ## Known Limitations
-- Auto-fix supports 4 rules (optional-chaining, boolean-simplification, unused-imports, early-return) — more planned
-- Complexity-hotspot is advisory only — no auto-fix support
+- Auto-fix supports 6 rules (optional-chaining, boolean-simplification, unused-imports, early-return, no-debugger, no-useless-return) — more planned
+- Complexity-hotspot, no-empty-catch, and ts-diagnostics are advisory only — no auto-fix support
 - Browser folder picker requires Chrome/Edge (File System Access API)
 
 ## Next Milestone
@@ -690,6 +690,7 @@ npm run repopack
 This scans \`ai/exports/\` for existing versioned files, increments the version, runs repomix, and writes:
 - \`ai/exports/repo-pack-full-vN.md\` — full repository pack
 - \`ai/exports/repo-pack-core-vN.md\` — core-only pack (no docs/screenshots/.github)
+- \`ai/exports/repo-pack-latest-vN.md\` — lightweight pack for quick review (no docs/screenshots/.github/scripts)
 - \`ai/exports/changes-summary-vN.md\` — this file
 `;
 
