@@ -12,6 +12,7 @@ Manual code review is time-consuming and inconsistent. InspectoRepo provides det
 - **Directory tree** — browse top-level directories with checkboxes; defaults to `src/` if present
 - **TS/TSX analysis engine** — deterministic pipeline: scan → parse (ts-morph in-memory) → apply rules → score → report
 - **Issue list UI** — filterable by severity/search, with detail panel showing suggestions and proposed patches
+- **Preview status** — the web UI displays a Preview badge indicating the product is under active development
 - **Scoring** — 0–100 score based on issue severity counts
 - **Markdown export** — download a full analysis report as `.md`
 - **Exclude rules** — automatically skips `node_modules`, `dist`, `build`, `.git`, hidden dirs, and other noise
@@ -252,6 +253,7 @@ InspectoRepo runs automatically on every pull request via the `.github/workflows
    node packages/cli/dist/index.js analyze . --dirs packages,apps --format md --out inspectorepo-report.md
    ```
 5. Uploads `inspectorepo-report.md` as a build artifact (retained 30 days)
+6. Posts a concise analysis summary comment on the pull request (score, issue counts, severity breakdown) — updates the same comment on subsequent runs to avoid noise
 
 Download the `inspectorepo-report` artifact from the Actions tab to see the full analysis.
 

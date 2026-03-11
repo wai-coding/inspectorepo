@@ -73,7 +73,8 @@ Key functions:
 - `buildAreaBullets(files)` — generates polished, outcome-focused bullets from changed file areas using `AREA_BULLET_TEMPLATES` (e.g. "Improved the core analysis engine for better detection accuracy")
 - `validateBullets(bullets)` — enforces 3–5 count, no banned patterns, no duplicates, no empty bullets; returns list of failures
 - `generateHumanSummary(pr, files, commits)` — produces 3–5 polished, milestone-specific bullets: (1) cleans PR title/body, (2) fills from area templates, (3) validates and retries with pure area fallback if needed
-- `validateSummaryContent(content)` — validates the written summary file: placeholder phrases, bullet count 3–5, banned noise in each bullet, duplicates, empty bullets, non-empty Files Changed
+- `validateSummaryContent(content)` — validates the written summary file: placeholder phrases, bullet count 3–5, banned noise in each bullet, duplicates, empty bullets, non-empty Files Changed, and Next Milestone validity (no already-implemented items, 2–4 count)
+- `generateNextMilestoneSection()` — dynamically generates the "Next Milestone" section from a curated `ROADMAP` array, filtering out items marked as `implemented`. Returns 2–4 future milestones as bullet lines
 
 #### Human Summary Quality Rules
 
@@ -90,6 +91,10 @@ The script enforces strict quality rules on every Human Summary bullet:
 - No empty bullets
 
 **Fallback strategy**: If PR metadata produces noisy or insufficient bullets, the script generates bullets from changed file area groups using polished templates. If even the fallback fails validation, the script aborts with `process.exit(1)`.
+
+#### Next Milestone Generation
+
+The `ROADMAP` array contains all milestones with an `implemented` boolean flag. `generateNextMilestoneSection()` filters to unimplemented items only and returns 2–4 bullet lines. `validateSummaryContent()` cross-checks the generated Next Milestone section against the roadmap to ensure no already-shipped features are listed.
 
 No tracked state file is used. The version is derived entirely from existing export filenames.
 
@@ -347,7 +352,7 @@ Central state hook managing folder, files, dirs, report, and selected issue. Key
 
 ### `src/components/TopBar.tsx`
 
-Header bar with score badge, issue/file counts, folder actions, Analyze button, and Export .md button.
+Header bar with score badge, issue/file counts, folder actions, Analyze button, and Export .md button. Includes a **Preview** status badge next to the app name (amber-styled, with tooltip "Under active development") to signal pre-release status.
 
 ### `src/components/Sidebar.tsx`
 
@@ -384,8 +389,9 @@ GitHub Action that runs InspectoRepo analysis on pull requests (and manual `work
 2. Install dependencies and build all packages
 3. Run `node packages/cli/dist/index.js analyze . --dirs packages,apps --format md --out inspectorepo-report.md`
 4. Upload the generated report as an artifact (`inspectorepo-report`)
+5. **PR comment bot** — on pull request events, uses `actions/github-script@v7` to parse the report (score, total issues, severity counts via regex), then posts or updates a summary comment on the PR. Uses an HTML marker comment (`<!-- inspectorepo-analysis -->`) to find and update a previous bot comment, avoiding duplicates.
 
-The report artifact can be downloaded from the Actions tab for each PR.
+The report artifact can be downloaded from the Actions tab for each PR. The summary comment provides instant visibility without downloading.
 
 ---
 
