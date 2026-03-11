@@ -160,7 +160,7 @@ const AREA_BULLET_TEMPLATES: Record<string, string> = {
   examples: 'Updated example fixtures to demonstrate current rule coverage and patterns',
   screenshots: 'Refreshed screenshots and demo automation for accurate visual documentation',
   root: 'Updated root project configuration for better workspace consistency',
-  other: 'Improved project tooling and developer workflow configuration',
+  other: 'Improved project tooling and overall developer workflow configuration quality',
 };
 
 // Banned patterns — bullets containing any of these are considered noisy/internal
