@@ -118,7 +118,7 @@ function buildSuggestion(b: ComplexityBreakdown): string {
   const tips: string[] = [];
 
   if (top.includes('nested conditionals') || top.includes('ternaries')) {
-    tips.push('replace nested conditionals with early returns');
+    tips.push('replace nested conditions with early returns');
   }
   if (top.includes('loops')) {
     tips.push('extract loop bodies into helper functions');
@@ -136,7 +136,7 @@ function buildSuggestion(b: ComplexityBreakdown): string {
     tips.push('extract helper functions to reduce complexity');
   }
 
-  return `Consider: ${tips.join('; ')}.`;
+  return `Suggested improvements: ${tips.join('; ')}.`;
 }
 
 export const complexityHotspotRule: Rule = {
@@ -203,7 +203,7 @@ export const complexityHotspotRule: Rule = {
         },
         suggestion: {
           summary: buildSuggestion(breakdown),
-          details: `Complexity score: ${score} (threshold: ${COMPLEXITY_THRESHOLD}). Contributors: ${contributors}${nestingNote}.`,
+          details: `Complexity score: ${score} (threshold: ${COMPLEXITY_THRESHOLD}). Primary contributors: ${contributors}${nestingNote}.`,
         },
       });
     }
