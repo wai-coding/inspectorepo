@@ -114,6 +114,10 @@ Sample TypeScript files designed to trigger all 4 implemented rules when analyze
 - `src/user-utils.ts` — optional chaining (3 guard chains) + boolean simplification (5 patterns)
 - `src/formatters.ts` — clean utility file (import target, no issues)
 
+### `custom-rule-no-console.ts`
+
+Example custom rule using `defineRule()` from `@inspectorepo/core`. Detects `console.log/warn/error` calls via ts-morph AST traversal. Demonstrates the custom rule API pattern for user-defined rules.
+
 ### `generate-report.ts`
 
 Node script that collects fixture files, runs `analyzeCodebase()`, and writes `sample-report.md`. Uses `readFileSync` + `readdirSync` to walk the fixture directory.
@@ -259,6 +263,10 @@ Detects unnecessary block-style early returns. Looks for `IfStatement` nodes whe
 - No comments exist inside the block
 
 Suggests collapsing `if (cond) { return; }` into `if (cond) return;`. Produces a `proposedDiff` showing the simplified form.
+
+### `src/custom-rule.ts`
+
+`defineRule(definition)` — factory function for creating custom rules compatible with the analysis engine. Accepts a `CustomRuleDefinition` object (id, title, severity, run function) and returns a `Rule`. Custom rules can be passed into `analyzeCodebase()` via `options.customRules` and run alongside built-in rules.
 
 ### `src/config.ts`
 

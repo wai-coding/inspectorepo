@@ -23,6 +23,8 @@ export { computeScore } from './scoring.js';
 export { buildMarkdownReport } from './report.js';
 export { parseReportSummary } from './report-parser.js';
 export type { ReportSummary } from './report-parser.js';
+export { defineRule } from './custom-rule.js';
+export type { CustomRuleDefinition } from './custom-rule.js';
 export {
   parseConfig,
   mergeConfig,

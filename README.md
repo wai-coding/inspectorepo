@@ -287,6 +287,45 @@ Download the `inspectorepo-report` artifact from the Actions tab to see the full
 - [ ] Custom rule authoring
 - [x] VS Code extension
 
+## Custom Rule API
+
+Extend InspectoRepo with your own rules using `defineRule()`:
+
+```ts
+import { analyzeCodebase, defineRule } from '@inspectorepo/core';
+
+const noConsoleRule = defineRule({
+  id: 'no-console',
+  title: 'No Console',
+  severity: 'warn',
+  run(ctx) {
+    const issues = [];
+    ctx.sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression).forEach((call) => {
+      if (/^console\.\w+$/.test(call.getExpression().getText())) {
+        issues.push({
+          id: `${ctx.filePath}:${call.getStartLineNumber()}:no-console`,
+          ruleId: 'no-console',
+          severity: 'warn',
+          message: `Unexpected ${call.getExpression().getText()} statement`,
+          filePath: ctx.filePath,
+          range: { start: { line: call.getStartLineNumber(), column: 1 }, end: { line: call.getStartLineNumber(), column: 1 } },
+          suggestion: { summary: 'Remove console statement', details: '' },
+        });
+      }
+    });
+    return issues;
+  },
+});
+
+const report = analyzeCodebase({
+  files,
+  selectedDirectories: ['src'],
+  options: { customRules: [noConsoleRule] },
+});
+```
+
+Custom rules run alongside built-in rules. Pass them via `options.customRules` — no plugin loading or npm packages required. See [examples/custom-rule-no-console.ts](./examples/custom-rule-no-console.ts) for a complete example.
+
 ## Screenshots
 
 Screenshot and demo video are generated automatically with Playwright:

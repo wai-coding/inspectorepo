@@ -32,6 +32,7 @@ export interface AnalyzeInput {
     rules?: Rule[];
     ruleConfig?: RuleConfig;
     ignorePatterns?: string[];
+    customRules?: Rule[];
   };
 }
 
@@ -47,6 +48,11 @@ export function analyzeCodebase(input: AnalyzeInput): AnalysisReport {
     rules = filterRulesByConfig(allRules, options.ruleConfig);
   } else {
     rules = allRules;
+  }
+
+  // Append custom rules if provided
+  if (options?.customRules && options.customRules.length > 0) {
+    rules = [...rules, ...options.customRules];
   }
 
   // Filter: only files under selected directories, exclude noise, apply ignore patterns, keep .ts/.tsx

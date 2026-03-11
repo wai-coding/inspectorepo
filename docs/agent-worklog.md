@@ -4,6 +4,37 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-11 — M17: Custom Rule API
+
+### What was implemented
+
+- **`defineRule()` API** (`packages/core/src/custom-rule.ts`) — a simple function that accepts a `CustomRuleDefinition` (id, title, severity, run) and returns a `Rule` compatible with the analysis engine.
+- **`customRules` option** in `analyzeCodebase()` — the analyzer now accepts `options.customRules` and appends them to the built-in (or configured) rule set.
+- **Example rule** (`examples/custom-rule-no-console.ts`) — a `no-console` rule that detects `console.log/warn/error` calls using ts-morph AST traversal.
+- **Tests** (`packages/core/src/custom-rule.test.ts`) — covers `defineRule` returning a valid rule, custom rules running during analysis, emitting issues correctly, and combining with built-in rules.
+- **Public exports** — `defineRule` and `CustomRuleDefinition` exported from `@inspectorepo/core`.
+
+### Why
+
+Allowing users to define their own rules makes InspectoRepo extensible. This is the first step toward a plugin ecosystem — custom rules are passed programmatically, keeping the implementation simple and stable.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+### Design decisions
+
+- **`defineRule()` over class-based** — a simple factory function is more approachable and aligns with the existing `Rule` interface.
+- **`customRules` appended, not replacing** — custom rules are added alongside built-in rules, not as replacements. This matches user expectations.
+- **No plugin loading from disk** — first version is programmatic only. Loading from npm/disk adds complexity that isn't needed yet.
+
+---
+
 ## 2026-03-11 — M16: Robust Report Parser for PR Comment Bot
 
 ### What was implemented
