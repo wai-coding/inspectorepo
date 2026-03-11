@@ -164,3 +164,37 @@ export function formatFixPreview(issue: Issue): string {
   lines.push('');
   return lines.join('\n');
 }
+
+/** Format all fixable issues as a preview-only report (no files modified). */
+export function formatPreviewReport(issues: Issue[]): string {
+  const lines: string[] = [];
+  lines.push('Proposed fixes:\n');
+
+  for (const issue of issues) {
+    const diff = issue.suggestion.proposedDiff ?? '';
+    const parsed = parseDiff(diff);
+
+    lines.push(`File: ${issue.filePath}`);
+    lines.push(`Rule: ${issue.ruleId}`);
+    lines.push('');
+
+    if (parsed) {
+      lines.push('  Before:');
+      for (const l of parsed.oldText.split('\n')) {
+        lines.push(`  ${l}`);
+      }
+      lines.push('');
+      lines.push('  After:');
+      const afterText = parsed.newText ?? '(remove)';
+      for (const l of afterText.split('\n')) {
+        lines.push(`  ${l}`);
+      }
+    }
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+  }
+
+  lines.push(`${issues.length} fixable issue(s) found. No files were modified.`);
+  return lines.join('\n');
+}

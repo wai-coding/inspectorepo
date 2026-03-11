@@ -4,6 +4,88 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-11 — M20: Fix Preview Mode
+
+### What was implemented
+
+- **Preview report formatter** (`packages/cli/src/fixer.ts`) — new `formatPreviewReport()` function generates a read-only preview of all fixable issues showing Before/After text for each proposed change, without modifying any files.
+- **CLI `--preview` flag** — `inspectorepo fix --preview` runs analysis, collects fixable issues, and prints the preview report then exits. No interactive prompts, no file writes.
+- **Tests** (`packages/cli/src/fixer.test.ts`) — 2 new tests: `formatPreviewReport` renders expected output with Before/After/No-files-modified; preview mode produces correct issue count.
+
+### Why
+
+Users and CI pipelines need a way to see what auto-fix would change before committing to it. Preview mode provides a dry-run that integrates into code review workflows.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+### Design decisions
+
+- **Read-only output** — `formatPreviewReport` is a pure formatting function with no side effects, making it safe for CI.
+- **Lightweight** — no diff library needed; the Before/After text is extracted from the existing `proposedDiff` field on each issue.
+- **`--preview` exits early** — after printing the preview report, the fix command returns without entering interactive mode.
+
+---
+
+## 2026-03-11 — M19: Web UI Improvements
+
+### What was implemented
+
+- **Severity color-coded rows** — each issue row has a colored left border: red for errors, orange for warnings, blue for info. Severity labels also use matching colors.
+- **Expandable issue details** — clicking an issue row expands it inline to show full severity, rule, location (file:line:col), message, and suggestion. Clicking again collapses it. A chevron indicator shows expand/collapse state.
+- **Clickable file paths** — file paths include line numbers with accent-colored highlights.
+- **Improved layout spacing** — tighter main panel padding (16px vs 24px), consistent gap sizes, better toolbar alignment. All within the existing CSS — no UI frameworks added.
+- **Preserved Preview badge** — the orange "Preview" label in the TopBar is unchanged.
+
+### Why
+
+The original dashboard showed issues as flat rows with no way to inspect details without selecting (which updates the right-side DetailsPanel). Expanding inline gives faster context and works well on narrower viewports. Severity color coding makes the issue list scannable at a glance.
+
+### How to verify
+
+```bash
+npm run dev
+# Open the web app → analyze a project → verify colored borders, filtering, expandable rows
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+### Design decisions
+
+- **No UI framework** — all styling via plain CSS. Expandable rows use React state, no animation libraries.
+- **Severity left border** — inspired by VS Code's problem panel. Immediate visual severity scan.
+- **Chevron indicator** — small triangle rotates 90° when expanded. Lightweight visual cue.
+- **Inline expansion** — preferred over modal/dialog to keep the user in context.
+
+---
+
+## 2026-03-11 — Fixes: Summary stabilization and parser reuse
+
+### What was implemented
+
+- **Truncation guard** — `generate-repomix-exports.ts` now strips backticks from PR body bullets and validates bullets for unmatched backticks, code blocks, and minimum length before inclusion.
+- **Report parser reuse** — new `scripts/extract-report-summary.ts` wraps `parseReportSummary()` from `@inspectorepo/core` as a CLI script. The GitHub Actions workflow now calls this script instead of parsing markdown inline.
+- **ESLint clarification** — added a comment explaining why `packages/vscode-extension/**` is excluded from ESLint (requires VS Code extension host types).
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+---
+
 ## 2026-03-11 — M18: Rule Presets
 
 ### What was implemented
