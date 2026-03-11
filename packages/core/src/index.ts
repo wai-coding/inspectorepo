@@ -1,4 +1,4 @@
-export { analyzeCodebase } from './analyzer.js';
+export { analyzeCodebase, groupIssuesByPackage } from './analyzer.js';
 export type { AnalyzeInput } from './analyzer.js';
 export type { Rule, RuleContext } from './rule.js';
 export { filterAnalyzableFiles, isAnalyzableFile } from './scanner.js';

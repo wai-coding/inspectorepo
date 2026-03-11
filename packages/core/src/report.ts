@@ -29,6 +29,20 @@ export function buildMarkdownReport(report: AnalysisReport): string {
   lines.push(`| ${SEVERITY_EMOJI.info} Info | ${report.summary.bySeverity.info} |`);
   lines.push('');
 
+  // Package group summary (monorepo analysis)
+  if (report.packageGroups && report.packageGroups.length > 0) {
+    lines.push('## Packages');
+    lines.push('');
+    lines.push('| Package | Score | Issues | Errors | Warnings | Info |');
+    lines.push('|---|---|---|---|---|---|');
+    for (const pg of report.packageGroups) {
+      lines.push(
+        `| ${pg.name} | **${pg.score}/100** | ${pg.issueCount} | ${pg.bySeverity.error} | ${pg.bySeverity.warn} | ${pg.bySeverity.info} |`,
+      );
+    }
+    lines.push('');
+  }
+
   if (report.issues.length === 0) {
     lines.push('No issues found.');
     return lines.join('\n');

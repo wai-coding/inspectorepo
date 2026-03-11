@@ -24,6 +24,7 @@ interface CliOptions {
   rules?: string;
   preset?: string;
   preview?: boolean;
+  groupBy?: 'package';
 }
 
 function printUsage(): void {
@@ -38,6 +39,7 @@ Options:
   --rules <rules>      Comma-separated rules to run (e.g. optional-chaining,unused-imports)
   --preset <name>      Rule preset: recommended, strict, cleanup, react
   --preview            Show proposed fixes without modifying files (fix only)
+  --group-by <type>    Group issues by package (monorepo, analyze only)
   --format <md|json>   Output format (default: md) (analyze only)
   --out <file>         Write output to file instead of stdout (analyze only)
   --max-issues <n>     Limit number of issues reported (analyze only)
@@ -84,6 +86,16 @@ function parseArgs(args: string[]): CliOptions | null {
         break;
       case '--preview':
         opts.preview = true;
+        break;
+      case '--group-by':
+        {
+          const gb = args[++i];
+          if (gb !== 'package') {
+            console.error(`Invalid group-by value: ${gb}. Use "package".`);
+            return null;
+          }
+          opts.groupBy = gb;
+        }
         break;
       case '--format':
         {
@@ -315,6 +327,7 @@ export function run(args: string[]): void {
     options: {
       ...(ruleConfig ? { ruleConfig } : {}),
       ...(ignorePatterns ? { ignorePatterns } : {}),
+      ...(opts.groupBy ? { groupBy: opts.groupBy } : {}),
     },
   });
 
