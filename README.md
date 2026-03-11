@@ -384,6 +384,17 @@ Download the `inspectorepo-report` artifact from the Actions tab to see the full
 - [ ] Dependency graph and cascade analysis
 - [ ] Performance profiling for large codebases
 
+## Deployment Readiness
+
+The InspectoRepo web UI is currently in **Preview**. It is stable enough for local experimentation and demo purposes but is not yet deployed as a hosted service.
+
+- **Browser support:** The folder picker requires the File System Access API (Chrome or Edge). Other browsers can use the Upload Folder fallback or the "Try with sample project" button.
+- **Onboarding:** The app shows a clear About section explaining how to run an analysis, with browser capability detection and a sample project for instant exploration.
+- **Empty state:** When no issues are found, the UI displays a friendly confirmation with the analysis score.
+- **Preview badge:** A visible "Preview" badge in the top bar signals the product is under active development.
+
+For production deployment, the web app is a standard Vite/React build (`npm run build`) and can be served from any static hosting provider.
+
 ## Custom Rule API
 
 Extend InspectoRepo with your own rules using `defineRule()`:
