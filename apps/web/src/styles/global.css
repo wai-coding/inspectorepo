@@ -50,7 +50,19 @@ body,
   font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.5px;
+}
+
+.preview-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: #ff980033;
+  color: #ff9800;
+  padding: 2px 8px;
+  border-radius: 3px;
   margin-right: auto;
+  cursor: default;
 }
 
 .top-bar .status {

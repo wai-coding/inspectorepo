@@ -132,6 +132,7 @@ function categorizeFiles(files: string[]): Map<string, string[]> {
     if (f.startsWith('packages/core/')) area = 'core';
     else if (f.startsWith('packages/cli/')) area = 'cli';
     else if (f.startsWith('packages/shared/')) area = 'shared';
+    else if (f.startsWith('packages/vscode-extension/')) area = 'vscode-extension';
     else if (f.startsWith('apps/web/')) area = 'web';
     else if (f.startsWith('docs/')) area = 'docs';
     else if (f.startsWith('ai/')) area = 'ai';
@@ -151,6 +152,7 @@ const AREA_BULLET_TEMPLATES: Record<string, string> = {
   core: 'Improved the core analysis engine for better detection accuracy',
   cli: 'Enhanced the CLI tool for a smoother command-line experience',
   shared: 'Refined shared type definitions across packages',
+  'vscode-extension': 'Enhanced the VS Code extension for a better in-editor experience',
   web: 'Polished the web UI for a more intuitive analysis workflow',
   docs: 'Kept documentation aligned with the latest codebase changes',
   ai: 'Improved milestone export generation so summaries are cleaner and more reliable',
@@ -422,10 +424,68 @@ function validateSummaryContent(content: string): void {
     process.exit(1);
   }
 
+  // Validate Next Milestone does not list already-implemented work
+  const nextSection = content.match(/## Next Milestone\n([\s\S]*?)(?=\n##|$)/);
+  if (nextSection) {
+    const implementedLabels = ROADMAP.filter(r => r.implemented).map(r => r.label.toLowerCase());
+    const nextLines = nextSection[1].split('\n').map(l => l.replace(/^- /, '').trim()).filter(Boolean);
+    for (const line of nextLines) {
+      for (const impl of implementedLabels) {
+        if (line.toLowerCase().includes(impl) || impl.includes(line.toLowerCase())) {
+          console.error(`\nERROR: Next Milestone lists already-implemented work: "${line}"`);
+          process.exit(1);
+        }
+      }
+    }
+    if (nextLines.length < 2 || nextLines.length > 4) {
+      console.error(`\nERROR: Next Milestone should have 2–4 items, found ${nextLines.length}`);
+      process.exit(1);
+    }
+  }
+
   console.log('  ✓ Human Summary: 3–5 polished bullets');
   console.log('  ✓ No banned noise patterns detected');
   console.log('  ✓ No duplicate bullets');
   console.log('  ✓ Files Changed section populated');
+  console.log('  ✓ Next Milestone: no already-implemented items');
+}
+
+// --- Next Milestone dynamic generation ---
+
+interface RoadmapItem {
+  label: string;
+  implemented: boolean;
+}
+
+/** Curated roadmap with implementation status. Keep this up to date as features ship. */
+const ROADMAP: RoadmapItem[] = [
+  { label: 'GitHub Action automated analysis', implemented: true },
+  { label: 'VS Code extension for in-editor analysis', implemented: true },
+  { label: 'Rule configuration system', implemented: true },
+  { label: 'Ignore file support', implemented: true },
+  { label: 'Early-return rule', implemented: true },
+  { label: 'CLI package for headless analysis', implemented: true },
+  { label: 'Auto-apply suggested fixes', implemented: true },
+  { label: 'PR comment bot for analysis summaries', implemented: true },
+  { label: 'Custom rule authoring API for user-defined rules', implemented: false },
+  { label: 'Stronger auto-fix engine with broader rule coverage', implemented: false },
+  { label: 'Rule presets for common project types', implemented: false },
+  { label: 'Monorepo-aware analysis with per-package reports', implemented: false },
+];
+
+function generateNextMilestoneSection(): string {
+  const future = ROADMAP.filter(r => !r.implemented).map(r => r.label);
+
+  // Validate: no duplicates, 2–4 items
+  const unique = [...new Set(future)];
+  const items = unique.slice(0, 4);
+  if (items.length < 2) {
+    // Safety fallback — should never happen if ROADMAP is maintained
+    items.push('Explore additional static analysis rules');
+    items.push('Performance profiling for large codebases');
+  }
+
+  return items.map(i => `- ${i}`).join('\n');
 }
 
 // ============================================================
@@ -550,9 +610,7 @@ ${milestoneFiles.join('\n')}
 - Browser folder picker requires Chrome/Edge (File System Access API)
 
 ## Next Milestone
-- Add custom rule authoring API for user-defined rules
-- VS Code extension for in-editor analysis
-- Expand auto-fix to support more rule types
+${generateNextMilestoneSection()}
 
 ## Regenerate
 

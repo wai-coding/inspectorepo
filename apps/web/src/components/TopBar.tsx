@@ -31,6 +31,7 @@ export function TopBar({
   return (
     <header className="top-bar">
       <h1>InspectoRepo</h1>
+      <span className="preview-badge" title="Under active development">Preview</span>
       {report && (
         <div className="top-bar-summary">
           <span className="score-badge">Score: {report.summary.score}/100</span>
