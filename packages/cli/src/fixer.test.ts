@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { parseDiff, isAutoFixable, applyFix, formatPreviewReport } from './fixer.js';
+import { parseDiff, isAutoFixable, applyFix, formatPreviewReport, buildFixPlan, computeFixSummary, formatSkipReason, formatFixSummary } from './fixer.js';
 import type { Issue } from '@inspectorepo/shared';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -34,6 +34,11 @@ describe('isAutoFixable', () => {
 
   it('returns true for unused-imports with diff', () => {
     const issue = makeIssue('unused-imports', '- import { foo } from "bar";');
+    expect(isAutoFixable(issue)).toBe(true);
+  });
+
+  it('returns true for early-return with diff', () => {
+    const issue = makeIssue('early-return', '- if (x) { return; }\n+ if (x) return;');
     expect(isAutoFixable(issue)).toBe(true);
   });
 
@@ -137,6 +142,7 @@ describe('applyFix', () => {
 
     const result = applyFix(tmpDir, issue);
     expect(result.applied).toBe(false);
+    expect(result.skipReason).toBe('duplicate-pattern');
     // File should be unchanged
     expect(readTestFile('src/dup.ts')).toBe(content);
   });
@@ -154,6 +160,7 @@ describe('applyFix', () => {
 
     const result = applyFix(tmpDir, issue);
     expect(result.applied).toBe(true);
+    expect(result.skipped).toBe(false);
     expect(readTestFile('src/single.ts')).toBe('const a = user?.name;\nconst b = 2;\n');
   });
 
@@ -171,6 +178,7 @@ describe('applyFix', () => {
 
     const result = applyFix(tmpDir, issue);
     expect(result.applied).toBe(false);
+    expect(result.skipReason).toBe('unexpected-context');
     // File should be unchanged
     expect(readTestFile('src/ctx.ts')).toBe(content);
   });
@@ -243,5 +251,99 @@ describe('formatPreviewReport', () => {
     expect(output).toContain('1 fixable issue(s) found');
     expect(output).toContain('No files were modified');
     // No file operations occurred — this is purely a formatting function
+  });
+});
+
+describe('buildFixPlan', () => {
+  it('filters to only auto-fixable issues', () => {
+    const issues: Issue[] = [
+      makeIssue('optional-chaining', '- a && a.b\n+ a?.b'),
+      makeIssue('complexity-hotspot', '- some diff'),
+      makeIssue('early-return', '- if (x) { return; }\n+ if (x) return;'),
+      makeIssue('optional-chaining'), // no diff
+    ];
+    const plan = buildFixPlan(issues);
+    expect(plan.fixable).toHaveLength(2);
+    expect(plan.fixable[0].ruleId).toBe('optional-chaining');
+    expect(plan.fixable[1].ruleId).toBe('early-return');
+    expect(plan.results).toHaveLength(0);
+    expect(plan.summary.total).toBe(2);
+  });
+
+  it('returns empty plan when no issues are fixable', () => {
+    const plan = buildFixPlan([makeIssue('complexity-hotspot')]);
+    expect(plan.fixable).toHaveLength(0);
+    expect(plan.summary.total).toBe(0);
+  });
+});
+
+describe('computeFixSummary', () => {
+  it('aggregates applied and skipped counts', () => {
+    const results = [
+      { filePath: 'a.ts', ruleId: 'optional-chaining', line: 1, applied: true, skipped: false },
+      { filePath: 'b.ts', ruleId: 'optional-chaining', line: 2, applied: false, skipped: true, skipReason: 'duplicate-pattern' as const },
+      { filePath: 'c.ts', ruleId: 'unused-imports', line: 3, applied: true, skipped: false },
+    ];
+    const summary = computeFixSummary(results);
+    expect(summary.total).toBe(3);
+    expect(summary.applied).toBe(2);
+    expect(summary.skipped).toBe(1);
+    expect(summary.byRule['optional-chaining']).toEqual({ applied: 1, skipped: 1 });
+    expect(summary.byRule['unused-imports']).toEqual({ applied: 1, skipped: 0 });
+  });
+
+  it('handles empty results', () => {
+    const summary = computeFixSummary([]);
+    expect(summary.total).toBe(0);
+    expect(summary.applied).toBe(0);
+    expect(summary.skipped).toBe(0);
+    expect(Object.keys(summary.byRule)).toHaveLength(0);
+  });
+});
+
+describe('formatSkipReason', () => {
+  it('returns human-readable strings for all reasons', () => {
+    expect(formatSkipReason('no-diff')).toContain('no proposed diff');
+    expect(formatSkipReason('parse-failed')).toContain('parse');
+    expect(formatSkipReason('file-read-error')).toContain('read');
+    expect(formatSkipReason('no-occurrences')).toContain('not found');
+    expect(formatSkipReason('duplicate-pattern')).toContain('multiple times');
+    expect(formatSkipReason('unexpected-context')).toContain('does not match');
+    expect(formatSkipReason('index-mismatch')).toContain('index');
+  });
+
+  it('handles undefined reason', () => {
+    expect(formatSkipReason(undefined)).toContain('unknown');
+  });
+});
+
+describe('formatFixSummary', () => {
+  const summary = {
+    total: 5,
+    applied: 3,
+    skipped: 2,
+    byRule: {
+      'optional-chaining': { applied: 2, skipped: 1 },
+      'unused-imports': { applied: 1, skipped: 1 },
+    },
+  };
+
+  it('formats applied mode with applied count', () => {
+    const output = formatFixSummary(summary, 'applied');
+    expect(output).toContain('Fix summary:');
+    expect(output).toContain('Total fixable: 5');
+    expect(output).toContain('Applied:       3');
+    expect(output).toContain('Skipped:       2');
+    expect(output).toContain('optional-chaining: 2 applied, 1 skipped');
+    expect(output).toContain('unused-imports: 1 applied, 1 skipped');
+  });
+
+  it('formats preview mode without applied count', () => {
+    const output = formatFixSummary(summary, 'preview');
+    expect(output).toContain('preview');
+    expect(output).toContain('Total fixable: 5');
+    expect(output).not.toContain('Applied:');
+    expect(output).toContain('Skipped:       2');
+    expect(output).toContain('optional-chaining: 3 issue(s)');
   });
 });

@@ -7,17 +7,42 @@ const SAFE_RULE_IDS = new Set([
   'optional-chaining',
   'boolean-simplification',
   'unused-imports',
+  'early-return',
 ]);
 
 export function isAutoFixable(issue: Issue): boolean {
   return SAFE_RULE_IDS.has(issue.ruleId) && !!issue.suggestion.proposedDiff;
 }
 
+export type SkipReason =
+  | 'no-diff'
+  | 'parse-failed'
+  | 'file-read-error'
+  | 'no-occurrences'
+  | 'duplicate-pattern'
+  | 'unexpected-context'
+  | 'index-mismatch';
+
 export interface FixResult {
   filePath: string;
   ruleId: string;
   line: number;
   applied: boolean;
+  skipped: boolean;
+  skipReason?: SkipReason;
+}
+
+export interface FixPlan {
+  fixable: Issue[];
+  results: FixResult[];
+  summary: FixSummary;
+}
+
+export interface FixSummary {
+  total: number;
+  applied: number;
+  skipped: number;
+  byRule: Record<string, { applied: number; skipped: number }>;
 }
 
 /**
@@ -60,19 +85,21 @@ export function applyFix(rootDir: string, issue: Issue): FixResult {
     ruleId: issue.ruleId,
     line: issue.range.start.line,
     applied: false,
+    skipped: true,
   };
 
   const diff = issue.suggestion.proposedDiff;
-  if (!diff) return result;
+  if (!diff) { result.skipReason = 'no-diff'; return result; }
 
   const parsed = parseDiff(diff);
-  if (!parsed) return result;
+  if (!parsed) { result.skipReason = 'parse-failed'; return result; }
 
   const fullPath = join(rootDir, issue.filePath);
   let content: string;
   try {
     content = readFileSync(fullPath, 'utf-8');
   } catch {
+    result.skipReason = 'file-read-error';
     return result;
   }
 
@@ -81,9 +108,10 @@ export function applyFix(rootDir: string, issue: Issue): FixResult {
 
   // Guard: check how many times the old text appears in the file
   const occurrences = countOccurrences(content, oldText);
-  if (occurrences === 0) return result;
+  if (occurrences === 0) { result.skipReason = 'no-occurrences'; return result; }
   if (occurrences > 1) {
     console.warn(`  ⚠ Skipped: pattern appears ${occurrences} times in file (expected 1)`);
+    result.skipReason = 'duplicate-pattern';
     return result;
   }
 
@@ -101,12 +129,13 @@ export function applyFix(rootDir: string, issue: Issue): FixResult {
 
   if (!matchesAtTarget) {
     console.warn('  ⚠ Skipped: unexpected context at target line');
+    result.skipReason = 'unexpected-context';
     return result;
   }
 
   // Apply replacement using indexOf on confirmed single occurrence
   const idx = content.indexOf(oldText);
-  if (idx === -1) return result;
+  if (idx === -1) { result.skipReason = 'index-mismatch'; return result; }
 
   if (newText !== null) {
     content = content.slice(0, idx) + newText + content.slice(idx + oldText.length);
@@ -120,6 +149,7 @@ export function applyFix(rootDir: string, issue: Issue): FixResult {
 
   writeFileSync(fullPath, content, 'utf-8');
   result.applied = true;
+  result.skipped = false;
   return result;
 }
 
@@ -196,5 +226,86 @@ export function formatPreviewReport(issues: Issue[]): string {
   }
 
   lines.push(`${issues.length} fixable issue(s) found. No files were modified.`);
+  return lines.join('\n');
+}
+
+/** Build a fix plan from analysis issues. Shared by preview and apply modes. */
+export function buildFixPlan(issues: Issue[]): FixPlan {
+  const fixable = issues.filter(isAutoFixable);
+  return {
+    fixable,
+    results: [],
+    summary: { total: fixable.length, applied: 0, skipped: 0, byRule: {} },
+  };
+}
+
+/** Compute summary from completed results. */
+export function computeFixSummary(results: FixResult[]): FixSummary {
+  const summary: FixSummary = {
+    total: results.length,
+    applied: 0,
+    skipped: 0,
+    byRule: {},
+  };
+
+  for (const r of results) {
+    if (!summary.byRule[r.ruleId]) {
+      summary.byRule[r.ruleId] = { applied: 0, skipped: 0 };
+    }
+    if (r.applied) {
+      summary.applied++;
+      summary.byRule[r.ruleId].applied++;
+    } else {
+      summary.skipped++;
+      summary.byRule[r.ruleId].skipped++;
+    }
+  }
+
+  return summary;
+}
+
+/** Human-readable skip reason. */
+export function formatSkipReason(reason: SkipReason | undefined): string {
+  switch (reason) {
+    case 'no-diff': return 'no proposed diff available';
+    case 'parse-failed': return 'could not parse the diff';
+    case 'file-read-error': return 'could not read the file';
+    case 'no-occurrences': return 'target pattern not found in file';
+    case 'duplicate-pattern': return 'pattern appears multiple times (ambiguous)';
+    case 'unexpected-context': return 'target line content does not match expected pattern';
+    case 'index-mismatch': return 'internal index mismatch';
+    default: return 'unknown reason';
+  }
+}
+
+/** Format a final summary for terminal display. */
+export function formatFixSummary(summary: FixSummary, mode: 'applied' | 'preview'): string {
+  const lines: string[] = [];
+  lines.push('');
+  if (mode === 'preview') {
+    lines.push(`Fix summary (preview — no files modified):`);
+  } else {
+    lines.push('Fix summary:');
+  }
+  lines.push(`  Total fixable: ${summary.total}`);
+  if (mode === 'applied') {
+    lines.push(`  Applied:       ${summary.applied}`);
+  }
+  lines.push(`  Skipped:       ${summary.skipped}`);
+
+  const ruleIds = Object.keys(summary.byRule).sort();
+  if (ruleIds.length > 0) {
+    lines.push('');
+    lines.push('  By rule:');
+    for (const id of ruleIds) {
+      const s = summary.byRule[id];
+      if (mode === 'applied') {
+        lines.push(`    ${id}: ${s.applied} applied, ${s.skipped} skipped`);
+      } else {
+        lines.push(`    ${id}: ${s.applied + s.skipped} issue(s)`);
+      }
+    }
+  }
+
   return lines.join('\n');
 }
