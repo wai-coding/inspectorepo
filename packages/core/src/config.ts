@@ -18,6 +18,10 @@ const DEFAULT_CONFIG: RuleConfig = {
   'optional-chaining': 'warn',
   'boolean-simplification': 'warn',
   'early-return': 'warn',
+  'no-debugger': 'warn',
+  'no-empty-catch': 'warn',
+  'no-useless-return': 'warn',
+  'ts-diagnostics': 'off',
 };
 
 /**
