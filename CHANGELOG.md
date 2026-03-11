@@ -1,5 +1,12 @@
 # Changelog
 
+## v5 — Summary Polish and Config Coverage
+
+- Improved human summary generator with complete sentence enforcement and deploy-readiness detection
+- Expanded config test coverage to verify all rules are wired into defaults, presets, and registry
+- Added deployment readiness section to README
+- Strengthened export workflow bullet validation with period-ending requirement
+
 ## v4 — Tooling Improvements
 
 - Stronger auto-fix engine with detailed skip reporting

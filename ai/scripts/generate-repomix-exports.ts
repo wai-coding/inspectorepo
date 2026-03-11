@@ -147,20 +147,20 @@ function categorizeFiles(files: string[]): Map<string, string[]> {
   return groups;
 }
 
-// Polished, outcome-focused bullet templates per area (≥8 words, verb-first)
+// Polished, outcome-focused bullet templates per area (≥8 words, verb-first, complete sentences)
 const AREA_BULLET_TEMPLATES: Record<string, string> = {
-  core: 'Expanded rule coverage with stronger detection accuracy and richer diagnostics',
-  cli: 'Enhanced the command-line interface for a smoother developer experience',
-  shared: 'Refined shared type definitions to improve consistency across all packages',
-  'vscode-extension': 'Improved the VS Code extension for faster in-editor feedback',
-  web: 'Polished the web interface for a more intuitive analysis workflow',
-  docs: 'Updated documentation to reflect the latest codebase improvements and conventions',
-  ai: 'Strengthened the export workflow so summaries are cleaner and more reliable',
-  workflow: 'Improved the CI pipeline to catch more issues before code ships',
-  examples: 'Updated example fixtures to demonstrate current rule coverage and patterns',
-  screenshots: 'Refreshed screenshots and demo automation for accurate visual documentation',
-  root: 'Updated root project configuration for better workspace consistency',
-  other: 'Improved project tooling and overall developer workflow configuration quality',
+  core: 'Expanded rule coverage with stronger detection accuracy and richer diagnostics.',
+  cli: 'Enhanced the command-line interface for a smoother developer experience.',
+  shared: 'Refined shared type definitions to improve consistency across all packages.',
+  'vscode-extension': 'Improved the VS Code extension for faster in-editor feedback.',
+  web: 'Polished the web interface for a more intuitive analysis workflow.',
+  docs: 'Updated documentation to reflect the latest codebase improvements and conventions.',
+  ai: 'Strengthened the export workflow so summaries are cleaner and more reliable.',
+  workflow: 'Improved the CI pipeline to catch more issues before code ships.',
+  examples: 'Updated example fixtures to demonstrate current rule coverage and patterns.',
+  screenshots: 'Refreshed screenshots and demo automation for accurate visual documentation.',
+  root: 'Updated root project configuration for better workspace consistency.',
+  other: 'Improved project tooling and overall developer workflow configuration quality.',
 };
 
 // Banned patterns — bullets containing any of these are considered noisy/internal
@@ -290,6 +290,8 @@ function isQualityBullet(bullet: string): boolean {
   if (!/^[A-Z][a-z]/.test(trimmed)) return false;
   // Must be at least 8 words
   if (trimmed.split(/\s+/).length < 8) return false;
+  // Must end with a period (complete sentence)
+  if (!trimmed.endsWith('.')) return false;
   // Must not contain file names (e.g. foo.ts, bar.tsx, baz.md)
   if (/\b\w+\.\w{1,4}\b/.test(trimmed) && /\.(ts|tsx|js|jsx|md|json|yml|yaml|css|html)/.test(trimmed)) return false;
   // Must not contain colon-prefixed commit text (e.g. "feat: ...")
@@ -298,6 +300,19 @@ function isQualityBullet(bullet: string): boolean {
   if (trimmed.includes('`')) return false;
   return true;
 }
+
+/** Ensure a bullet ends with a period. */
+function ensurePeriod(bullet: string): string {
+  const trimmed = bullet.trim();
+  return trimmed.endsWith('.') ? trimmed : `${trimmed}.`;
+}
+
+/** Check if any changed files are in apps/web/. */
+function hasWebChanges(files: string[]): boolean {
+  return files.some(f => f.startsWith('apps/web/'));
+}
+
+const DEPLOY_READINESS_BULLET = 'Improved deploy readiness in the web application with clearer onboarding and browser capability detection.'
 
 /** Validate that all bullets pass quality rules. Returns list of failing bullets. */
 function validateBullets(bullets: string[]): string[] {
@@ -357,8 +372,13 @@ function generateHumanSummary(pr: PRInfo, files: string[], _commits: string): st
     }
   }
 
-  // --- Phase 3: Trim to 3–5 and validate ---
-  let bullets = candidates.slice(0, 5);
+  // --- Phase 2b: Inject deploy-readiness bullet if web files changed ---
+  if (hasWebChanges(files) && !candidates.some(c => c.toLowerCase().includes('deploy readiness'))) {
+    candidates.push(DEPLOY_READINESS_BULLET);
+  }
+
+  // --- Phase 3: Ensure complete sentences, trim to 3–5 and validate ---
+  let bullets = candidates.map(ensurePeriod).slice(0, 5);
 
   // Remove any that still fail validation individually
   bullets = bullets.filter(b => !isBannedBullet(b) && b.trim().length > 0 && !isTruncatedBullet(b) && isQualityBullet(b));
@@ -380,9 +400,9 @@ function generateHumanSummary(pr: PRInfo, files: string[], _commits: string): st
     bullets = buildAreaBullets(files);
     // Always ensure at least 3
     const fallbacks = [
-      'Strengthened the export workflow so summaries are cleaner and more reliable',
-      'Updated documentation to reflect the latest codebase improvements and conventions',
-      'Improved developer feedback with clearer diagnostics and auto-fix reporting',
+      'Strengthened the export workflow so summaries are cleaner and more reliable.',
+      'Updated documentation to reflect the latest codebase improvements and conventions.',
+      'Improved developer feedback with clearer diagnostics and auto-fix reporting.',
     ];
     for (const fb of fallbacks) {
       if (bullets.length >= 3) break;
@@ -392,7 +412,7 @@ function generateHumanSummary(pr: PRInfo, files: string[], _commits: string): st
     }
   }
 
-  return bullets.slice(0, 5);
+  return bullets.map(ensurePeriod).slice(0, 5);
 }
 
 // --- Summary content validation ---
@@ -651,9 +671,9 @@ if (bulletErrors.length > 0) {
   humanBullets = buildAreaBullets(milestoneFiles);
   // Ensure 3–5 range
   const fallbacks = [
-    'Strengthened the export workflow so summaries are cleaner and more reliable',
-    'Updated documentation to reflect the latest codebase improvements and conventions',
-    'Improved developer feedback with clearer diagnostics and auto-fix reporting',
+    'Strengthened the export workflow so summaries are cleaner and more reliable.',
+    'Updated documentation to reflect the latest codebase improvements and conventions.',
+    'Improved developer feedback with clearer diagnostics and auto-fix reporting.',
   ];
   for (const fb of fallbacks) {
     if (humanBullets.length >= 3) break;
