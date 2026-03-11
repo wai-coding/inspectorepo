@@ -262,7 +262,7 @@ describe('complexity-hotspot rule', () => {
     expect(issue.suggestion.details).toMatch(/if statement/);
     expect(issue.suggestion.details).toMatch(/Complexity score: \d+/);
     // Suggestion should be specific, not generic
-    expect(issue.suggestion.summary).toMatch(/Consider:/);
+    expect(issue.suggestion.summary).toMatch(/Suggested improvements:/);
   });
 
   it('includes contributor counts in details', () => {
