@@ -5,6 +5,7 @@ interface MainPanelProps {
   report: AnalysisReport | null;
   selectedIssue: Issue | null;
   onSelectIssue: (issue: Issue | null) => void;
+  onLoadSample: () => void;
 }
 
 const SEVERITY_LABELS: Record<Severity, string> = {
@@ -19,10 +20,12 @@ const SEVERITY_COLORS: Record<Severity, string> = {
   info: '#2196f3',
 };
 
-export function MainPanel({ report, selectedIssue, onSelectIssue }: MainPanelProps) {
+export function MainPanel({ report, selectedIssue, onSelectIssue, onLoadSample }: MainPanelProps) {
   const [filter, setFilter] = useState<Severity | 'all'>('all');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const hasFolderPicker = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
 
   if (!report) {
     return (
@@ -35,11 +38,22 @@ export function MainPanel({ report, selectedIssue, onSelectIssue }: MainPanelPro
               code quality improvements — with proposed fixes, severity scoring, and exportable reports.
             </p>
             <p className="about-text">
-              Select a folder and click <strong>Analyze</strong> to get started.
+              <strong>How to run an analysis:</strong> Click <strong>Select Folder</strong> (Chrome/Edge)
+              or <strong>Upload Folder</strong> (any browser) to load a project. Pick directories in the
+              sidebar, then click <strong>Analyze</strong>.
             </p>
+            {!hasFolderPicker && (
+              <p className="about-hint">
+                This browser does not support file system analysis features.
+                Use Chrome or Edge for the best experience, or use the <strong>Upload Folder</strong> fallback.
+              </p>
+            )}
             <p className="about-hint">
-              This UI is currently in <strong>Preview</strong> — features are under active development.
+              This app is currently in <strong>Preview</strong> — features are under active development.
             </p>
+            <button className="btn btn-accent" style={{ marginTop: 12 }} onClick={onLoadSample}>
+              Try with sample project
+            </button>
           </div>
         </div>
       </main>

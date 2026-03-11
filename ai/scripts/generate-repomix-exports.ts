@@ -147,20 +147,20 @@ function categorizeFiles(files: string[]): Map<string, string[]> {
   return groups;
 }
 
-// Polished, outcome-focused bullet templates per area
+// Polished, outcome-focused bullet templates per area (≥8 words, verb-first)
 const AREA_BULLET_TEMPLATES: Record<string, string> = {
-  core: 'Improved the core analysis engine for better detection accuracy',
-  cli: 'Enhanced the CLI tool for a smoother command-line experience',
-  shared: 'Refined shared type definitions across packages',
-  'vscode-extension': 'Enhanced the VS Code extension for a better in-editor experience',
-  web: 'Polished the web UI for a more intuitive analysis workflow',
-  docs: 'Kept documentation aligned with the latest codebase changes',
-  ai: 'Improved milestone export generation so summaries are cleaner and more reliable',
-  workflow: 'Strengthened CI/CD pipeline for more reliable automated checks',
-  examples: 'Updated example fixtures to reflect current rule coverage',
-  screenshots: 'Refreshed screenshots and demo automation',
-  root: 'Updated root project configuration for consistency',
-  other: 'Improved project tooling and configuration',
+  core: 'Expanded rule coverage with stronger detection accuracy and richer diagnostics',
+  cli: 'Enhanced the command-line interface for a smoother developer experience',
+  shared: 'Refined shared type definitions to improve consistency across all packages',
+  'vscode-extension': 'Improved the VS Code extension for faster in-editor feedback',
+  web: 'Polished the web interface for a more intuitive analysis workflow',
+  docs: 'Updated documentation to reflect the latest codebase improvements and conventions',
+  ai: 'Strengthened the export workflow so summaries are cleaner and more reliable',
+  workflow: 'Improved the CI pipeline to catch more issues before code ships',
+  examples: 'Updated example fixtures to demonstrate current rule coverage and patterns',
+  screenshots: 'Refreshed screenshots and demo automation for accurate visual documentation',
+  root: 'Updated root project configuration for better workspace consistency',
+  other: 'Improved project tooling and developer workflow configuration',
 };
 
 // Banned patterns — bullets containing any of these are considered noisy/internal
@@ -283,6 +283,22 @@ function formatGroupedFiles(files: string[]): string {
   return lines.join('\n').trim();
 }
 
+/** Check whether a bullet meets quality standards for human-readable output. */
+function isQualityBullet(bullet: string): boolean {
+  const trimmed = bullet.trim();
+  // Must start with a verb (capital letter followed by lowercase)
+  if (!/^[A-Z][a-z]/.test(trimmed)) return false;
+  // Must be at least 8 words
+  if (trimmed.split(/\s+/).length < 8) return false;
+  // Must not contain file names (e.g. foo.ts, bar.tsx, baz.md)
+  if (/\b\w+\.\w{1,4}\b/.test(trimmed) && /\.(ts|tsx|js|jsx|md|json|yml|yaml|css|html)/.test(trimmed)) return false;
+  // Must not contain colon-prefixed commit text (e.g. "feat: ...")
+  if (/^[a-z]+(\([^)]*\))?:/i.test(trimmed)) return false;
+  // Must not contain backticks
+  if (trimmed.includes('`')) return false;
+  return true;
+}
+
 /** Validate that all bullets pass quality rules. Returns list of failing bullets. */
 function validateBullets(bullets: string[]): string[] {
   const failures: string[] = [];
@@ -290,6 +306,7 @@ function validateBullets(bullets: string[]): string[] {
     if (isBannedBullet(b)) failures.push(`BANNED: "${b}"`);
     if (b.trim().length === 0) failures.push('EMPTY bullet');
     if (isTruncatedBullet(b)) failures.push(`TRUNCATED: "${b}"`);
+    if (!isQualityBullet(b)) failures.push(`LOW_QUALITY: "${b}"`);
   }
   // Check duplicates
   const seen = new Set<string>();
@@ -344,7 +361,7 @@ function generateHumanSummary(pr: PRInfo, files: string[], _commits: string): st
   let bullets = candidates.slice(0, 5);
 
   // Remove any that still fail validation individually
-  bullets = bullets.filter(b => !isBannedBullet(b) && b.trim().length > 0 && !isTruncatedBullet(b));
+  bullets = bullets.filter(b => !isBannedBullet(b) && b.trim().length > 0 && !isTruncatedBullet(b) && isQualityBullet(b));
 
   // Deduplicate (case-insensitive)
   const deduped: string[] = [];
@@ -363,9 +380,9 @@ function generateHumanSummary(pr: PRInfo, files: string[], _commits: string): st
     bullets = buildAreaBullets(files);
     // Always ensure at least 3
     const fallbacks = [
-      'Improved milestone export generation so summaries are cleaner and more reliable',
-      'Kept workflow documentation aligned with the automated export pipeline',
-      'Strengthened export quality checks so only clean, polished summaries are produced',
+      'Strengthened the export workflow so summaries are cleaner and more reliable',
+      'Updated documentation to reflect the latest codebase improvements and conventions',
+      'Improved developer feedback with clearer diagnostics and auto-fix reporting',
     ];
     for (const fb of fallbacks) {
       if (bullets.length >= 3) break;
@@ -435,7 +452,7 @@ function validateSummaryContent(content: string): void {
     process.exit(1);
   }
 
-  // Check each bullet against banned patterns and truncation
+  // Check each bullet against banned patterns, truncation, and quality
   for (const bullet of bulletLines) {
     if (bullet.length === 0) {
       console.error('\nERROR: Human Summary contains an empty bullet');
@@ -447,6 +464,10 @@ function validateSummaryContent(content: string): void {
     }
     if (isTruncatedBullet(bullet)) {
       console.error(`\nERROR: Human Summary bullet appears truncated: "${bullet}"`);
+      process.exit(1);
+    }
+    if (!isQualityBullet(bullet)) {
+      console.error(`\nERROR: Human Summary bullet fails quality check (must start with verb, ≥8 words, no file names, no commit prefixes): "${bullet}"`);
       process.exit(1);
     }
   }
@@ -630,9 +651,9 @@ if (bulletErrors.length > 0) {
   humanBullets = buildAreaBullets(milestoneFiles);
   // Ensure 3–5 range
   const fallbacks = [
-    'Improved milestone export generation so summaries are cleaner and more reliable',
-    'Kept workflow documentation aligned with the automated export pipeline',
-    'Strengthened export quality checks so only clean, polished summaries are produced',
+    'Strengthened the export workflow so summaries are cleaner and more reliable',
+    'Updated documentation to reflect the latest codebase improvements and conventions',
+    'Improved developer feedback with clearer diagnostics and auto-fix reporting',
   ];
   for (const fb of fallbacks) {
     if (humanBullets.length >= 3) break;

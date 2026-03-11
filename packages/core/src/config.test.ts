@@ -38,6 +38,10 @@ describe('mergeConfig', () => {
     const result = mergeConfig(null);
     expect(result['unused-imports']).toBe('warn');
     expect(result['early-return']).toBe('warn');
+    expect(result['no-debugger']).toBe('warn');
+    expect(result['no-empty-catch']).toBe('warn');
+    expect(result['no-useless-return']).toBe('warn');
+    expect(result['ts-diagnostics']).toBe('off');
   });
 
   it('overrides defaults with loaded config', () => {
