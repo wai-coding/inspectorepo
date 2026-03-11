@@ -526,10 +526,6 @@ const ROADMAP: RoadmapItem[] = [
   { label: 'Performance profiling for large codebases', implemented: false },
   { label: 'VS Code extension inline fix suggestions', implemented: false },
 ];
-  { label: 'Rule dependency graph and cascade analysis', implemented: false },
-  { label: 'Performance profiling for large codebases', implemented: false },
-  { label: 'VS Code extension inline fix suggestions', implemented: false },
-];
 
 function generateNextMilestoneSection(): string {
   const future = ROADMAP.filter(r => !r.implemented).map(r => r.label);
