@@ -21,6 +21,7 @@ interface CliOptions {
   out?: string;
   maxIssues?: number;
   rules?: string;
+  preset?: string;
 }
 
 function printUsage(): void {
@@ -33,6 +34,7 @@ Commands:
 Options:
   --dirs <dirs>        Comma-separated directories to analyze (e.g. src,lib)
   --rules <rules>      Comma-separated rules to run (e.g. optional-chaining,unused-imports)
+  --preset <name>      Rule preset: recommended, strict, cleanup, react
   --format <md|json>   Output format (default: md) (analyze only)
   --out <file>         Write output to file instead of stdout (analyze only)
   --max-issues <n>     Limit number of issues reported (analyze only)
@@ -73,6 +75,9 @@ function parseArgs(args: string[]): CliOptions | null {
         break;
       case '--rules':
         opts.rules = args[++i] || '';
+        break;
+      case '--preset':
+        opts.preset = args[++i] || '';
         break;
       case '--format':
         {
@@ -157,8 +162,11 @@ async function runFix(args: string[]): Promise<void> {
       const configJson = readFileSync(configPath, 'utf-8');
       const parsed = parseConfig(configJson);
       if (parsed) {
-        ruleConfig = mergeConfig(parsed.rules);
+        ruleConfig = mergeConfig(parsed.rules, opts.preset ?? parsed.preset);
       }
+    }
+    if (!ruleConfig && opts.preset) {
+      ruleConfig = mergeConfig(null, opts.preset);
     }
   }
 
@@ -257,8 +265,11 @@ export function run(args: string[]): void {
       const configJson = readFileSync(configPath, 'utf-8');
       const parsed = parseConfig(configJson);
       if (parsed) {
-        ruleConfig = mergeConfig(parsed.rules);
+        ruleConfig = mergeConfig(parsed.rules, opts.preset ?? parsed.preset);
       }
+    }
+    if (!ruleConfig && opts.preset) {
+      ruleConfig = mergeConfig(null, opts.preset);
     }
   }
 

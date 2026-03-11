@@ -25,6 +25,8 @@ export { parseReportSummary } from './report-parser.js';
 export type { ReportSummary } from './report-parser.js';
 export { defineRule } from './custom-rule.js';
 export type { CustomRuleDefinition } from './custom-rule.js';
+export { resolvePreset, isValidPreset, getPresetNames } from './presets.js';
+export type { PresetName } from './presets.js';
 export {
   parseConfig,
   mergeConfig,

@@ -4,6 +4,38 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-11 — M18: Rule Presets
+
+### What was implemented
+
+- **Preset system** (`packages/core/src/presets.ts`) — four curated rule presets: `recommended`, `strict`, `cleanup`, `react`. Each preset defines a `RuleConfig` with appropriate severity levels. Functions: `resolvePreset()`, `isValidPreset()`, `getPresetNames()`.
+- **Config integration** — `parseConfig()` now reads the optional `preset` field from `.inspectorepo.json`. `mergeConfig()` accepts an optional preset name and uses it as the base before applying explicit rule overrides.
+- **CLI `--preset` flag** — the CLI now accepts `--preset <name>` to select a preset. CLI `--preset` overrides config file preset; explicit `--rules` still takes full priority.
+- **Tests** (`packages/core/src/presets.test.ts`) — 11 tests covering preset resolution, validation, listing, mergeConfig with preset defaults, explicit override over preset, and invalid preset fallback.
+- **Public exports** — `resolvePreset`, `isValidPreset`, `getPresetNames`, and `PresetName` exported from `@inspectorepo/core`.
+
+### Why
+
+Presets improve UX by providing sensible defaults for common use cases (strict CI, cleanup passes, React projects) without requiring users to manually configure each rule. This is a natural complement to the custom rule API (M17).
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+### Design decisions
+
+- **Four presets** — `recommended` (safe defaults), `strict` (CI/production), `cleanup` (refactoring passes), `react` (TS+React focus). Covers the most common use cases without over-specializing.
+- **Preset as base, explicit rules override** — matches how ESLint extends work. Users start with a preset and fine-tune individual rules.
+- **Invalid preset falls back to defaults** — typos or unknown presets don’t crash; they silently use the default config.
+- **CLI `--rules` still takes full priority** — when `--rules` is specified, presets and config files are ignored. This matches existing behavior.
+
+---
+
 ## 2026-03-11 — M17: Custom Rule API
 
 ### What was implemented

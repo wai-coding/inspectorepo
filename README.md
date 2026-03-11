@@ -191,6 +191,42 @@ Create `.inspectorepo.json` in your project root to configure which rules run an
 }
 ```
 
+### Rule Presets
+
+Use a preset for a curated default configuration:
+
+```json
+{
+  "preset": "recommended"
+}
+```
+
+Available presets:
+
+| Preset | Description |
+|--------|-------------|
+| `recommended` | Balanced defaults — all rules at `warn` |
+| `strict` | Stricter — `unused-imports` and `complexity-hotspot` at `error` |
+| `cleanup` | Style-focused — disables `complexity-hotspot`, keeps simplification rules |
+| `react` | React/TS projects — `unused-imports` at `error`, all others `warn` |
+
+Explicit rule config overrides preset values:
+
+```json
+{
+  "preset": "strict",
+  "rules": {
+    "complexity-hotspot": "off"
+  }
+}
+```
+
+CLI preset override:
+
+```bash
+inspectorepo analyze ./my-project --preset strict
+```
+
 Severity levels:
 
 | Level | Behavior |
@@ -284,8 +320,9 @@ Download the `inspectorepo-report` artifact from the Actions tab to see the full
 - [x] Auto-apply suggested fixes (`inspectorepo fix`)
 - [x] CLI package for headless analysis
 - [x] GitHub Action for automated PR analysis
-- [ ] Custom rule authoring
+- [x] Custom rule authoring
 - [x] VS Code extension
+- [x] Rule presets
 
 ## Custom Rule API
 

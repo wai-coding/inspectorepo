@@ -268,11 +268,20 @@ Suggests collapsing `if (cond) { return; }` into `if (cond) return;`. Produces a
 
 `defineRule(definition)` — factory function for creating custom rules compatible with the analysis engine. Accepts a `CustomRuleDefinition` object (id, title, severity, run function) and returns a `Rule`. Custom rules can be passed into `analyzeCodebase()` via `options.customRules` and run alongside built-in rules.
 
+### `src/presets.ts`
+
+Rule preset system:
+- `resolvePreset(name)` — returns a `RuleConfig` for the given preset name, or null for unknown presets
+- `isValidPreset(name)` — type guard checking if a string is a valid `PresetName`
+- `getPresetNames()` — returns the list of available preset names
+
+Presets: `recommended` (all warn), `strict` (unused-imports + complexity at error), `cleanup` (complexity off, style rules on), `react` (unused-imports at error for TS+React projects).
+
 ### `src/config.ts`
 
 Rule configuration loader:
-- `parseConfig(json)` — parses `.inspectorepo.json` content, returns `InspectorepoConfig` or null
-- `mergeConfig(loaded)` — merges loaded config with defaults (all rules default to `warn`)
+- `parseConfig(json)` — parses `.inspectorepo.json` content, returns `InspectorepoConfig` or null. Now also reads the optional `preset` field.
+- `mergeConfig(loaded, preset?)` — merges loaded config with defaults. If a preset is provided, its values serve as the base before applying explicit rule overrides.
 - `filterRulesByConfig(rules, config)` — filters and optionally overrides severity based on config
 - `cliRulesToConfig(cliRules, allRuleIds)` — converts `--rules` CLI flag value into a config object
 
