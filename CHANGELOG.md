@@ -1,5 +1,17 @@
 # Changelog
 
+## v4 — Tooling Improvements
+
+- Stronger auto-fix engine with detailed skip reporting
+- Monorepo-aware package summaries in CLI and PR comments
+- HTML report improvements
+- Conservative rules: no-debugger, no-empty-catch, no-useless-return
+- Diagnostics-backed analysis via ts-diagnostics rule
+- Richer complexity warnings with per-function contributor breakdown
+- Export workflow improvements and human summary quality enforcement
+- Lightweight repo-pack-latest export mode
+- Deploy readiness improvements for the web UI
+
 ## v3 — Platform
 
 - Custom rule authoring API (`defineRule()`)
