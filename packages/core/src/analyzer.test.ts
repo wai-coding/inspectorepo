@@ -6,6 +6,7 @@ import { complexityHotspotRule } from './rules/complexity-hotspot.js';
 import { optionalChainingRule } from './rules/optional-chaining.js';
 import { booleanSimplificationRule } from './rules/boolean-simplification.js';
 import { buildMarkdownReport } from './report.js';
+import { buildHtmlReport } from './report.js';
 
 describe('scanner', () => {
   it('identifies .ts files as analyzable', () => {
@@ -582,5 +583,68 @@ describe('buildMarkdownReport with packageGroups', () => {
     const md = buildMarkdownReport(report);
     expect(md).toContain('## Packages');
     expect(md).toContain('packages/core');
+  });
+});
+
+describe('buildHtmlReport', () => {
+  it('produces valid HTML with doctype and structure', () => {
+    const report = analyzeCodebase({
+      files: [
+        { path: 'src/test.ts', content: 'import { foo } from "./foo";\nconst x = 1;\n' },
+      ],
+      selectedDirectories: ['src'],
+      options: { rules: [unusedImportsRule] },
+    });
+    const html = buildHtmlReport(report);
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain('<html');
+    expect(html).toContain('</html>');
+    expect(html).toContain('InspectoRepo Analysis Report');
+    expect(html).toContain('unused-imports');
+  });
+
+  it('includes embedded CSS styles', () => {
+    const report = analyzeCodebase({
+      files: [{ path: 'src/clean.ts', content: 'export const x = 1;\n' }],
+      selectedDirectories: ['src'],
+    });
+    const html = buildHtmlReport(report);
+    expect(html).toContain('<style>');
+    expect(html).toContain('</style>');
+  });
+
+  it('shows no-issues message for clean report', () => {
+    const report = analyzeCodebase({
+      files: [{ path: 'src/clean.ts', content: 'export const x = 1;\n' }],
+      selectedDirectories: ['src'],
+    });
+    const html = buildHtmlReport(report);
+    expect(html).toContain('No issues found');
+  });
+
+  it('escapes HTML in issue content', () => {
+    const report = analyzeCodebase({
+      files: [
+        { path: 'src/test.ts', content: 'const x = a && a.b;\n' },
+      ],
+      selectedDirectories: ['src'],
+      options: { rules: [optionalChainingRule] },
+    });
+    const html = buildHtmlReport(report);
+    // The message should not contain raw < or > that could break HTML
+    expect(html).not.toMatch(/<(?!\/|!|[a-z])/i); // no stray < outside tags
+  });
+
+  it('includes package groups when present', () => {
+    const report = analyzeCodebase({
+      files: [
+        { path: 'packages/core/src/a.ts', content: 'import { x } from "y";\nconst z = 1;\n' },
+      ],
+      selectedDirectories: ['packages'],
+      options: { rules: [unusedImportsRule], groupBy: 'package' },
+    });
+    const html = buildHtmlReport(report);
+    expect(html).toContain('Packages');
+    expect(html).toContain('packages/core');
   });
 });

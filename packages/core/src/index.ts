@@ -20,7 +20,7 @@ export {
 } from './file-filter.js';
 export type { DirEntry, FileEntry } from './file-filter.js';
 export { computeScore } from './scoring.js';
-export { buildMarkdownReport } from './report.js';
+export { buildMarkdownReport, buildHtmlReport } from './report.js';
 export { parseReportSummary } from './report-parser.js';
 export type { ReportSummary } from './report-parser.js';
 export { defineRule } from './custom-rule.js';

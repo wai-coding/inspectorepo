@@ -4,6 +4,7 @@ import { createInterface } from 'node:readline';
 import {
   analyzeCodebase,
   buildMarkdownReport,
+  buildHtmlReport,
   allRules,
   parseConfig,
   mergeConfig,
@@ -18,7 +19,7 @@ import type { FixResult } from './fixer.js';
 interface CliOptions {
   path: string;
   dirs: string[];
-  format: 'md' | 'json';
+  format: 'md' | 'json' | 'html';
   out?: string;
   maxIssues?: number;
   rules?: string;
@@ -40,7 +41,7 @@ Options:
   --preset <name>      Rule preset: recommended, strict, cleanup, react
   --preview            Show proposed fixes without modifying files (fix only)
   --group-by <type>    Group issues by package (monorepo, analyze only)
-  --format <md|json>   Output format (default: md) (analyze only)
+  --format <fmt>       Output format: md, json, html (default: md) (analyze only)
   --out <file>         Write output to file instead of stdout (analyze only)
   --max-issues <n>     Limit number of issues reported (analyze only)
   --help               Show this help message
@@ -100,8 +101,8 @@ function parseArgs(args: string[]): CliOptions | null {
       case '--format':
         {
           const fmt = args[++i];
-          if (fmt !== 'md' && fmt !== 'json') {
-            console.error(`Invalid format: ${fmt}. Use "md" or "json".`);
+          if (fmt !== 'md' && fmt !== 'json' && fmt !== 'html') {
+            console.error(`Invalid format: ${fmt}. Use "md", "json", or "html".`);
             return null;
           }
           opts.format = fmt;
@@ -339,6 +340,8 @@ export function run(args: string[]): void {
   let output: string;
   if (opts.format === 'json') {
     output = JSON.stringify(report, null, 2);
+  } else if (opts.format === 'html') {
+    output = buildHtmlReport(report);
   } else {
     output = buildMarkdownReport(report);
   }
