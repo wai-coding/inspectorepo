@@ -4,6 +4,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   analyze:
     runs-on: ubuntu-latest
@@ -34,4 +38,68 @@ jobs:
           path: inspectorepo-report.md
           retention-days: 30
 
-      # TODO: Add PR comment step to post report summary directly on the pull request
+      - name: Post PR comment with analysis summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('inspectorepo-report.md', 'utf-8');
+
+            // Extract score
+            const scoreMatch = report.match(/Score:\s*(\d+)\s*\/\s*100/);
+            const score = scoreMatch ? scoreMatch[1] : '?';
+
+            // Extract total issues
+            const totalMatch = report.match(/Total Issues:\s*(\d+)/i) || report.match(/(\d+)\s+issue/i);
+            const totalIssues = totalMatch ? totalMatch[1] : '0';
+
+            // Extract severity counts from the summary table
+            const errorMatch = report.match(/Errors?[:\s|]*(\d+)/i);
+            const warnMatch = report.match(/Warnings?[:\s|]*(\d+)/i);
+            const infoMatch = report.match(/Info[:\s|]*(\d+)/i);
+
+            const errors = errorMatch ? errorMatch[1] : '0';
+            const warnings = warnMatch ? warnMatch[1] : '0';
+            const infos = infoMatch ? infoMatch[1] : '0';
+
+            const marker = '<!-- inspectorepo-analysis -->';
+            const body = [
+              marker,
+              '## 🔍 InspectoRepo Analysis',
+              '',
+              `| Metric | Value |`,
+              `|--------|-------|`,
+              `| Score | **${score}/100** |`,
+              `| Total Issues | ${totalIssues} |`,
+              `| 🔴 Errors | ${errors} |`,
+              `| 🟡 Warnings | ${warnings} |`,
+              `| 🔵 Info | ${infos} |`,
+              '',
+              '> Full report available as a workflow artifact.',
+            ].join('\n');
+
+            // Find and update existing bot comment, or create new one
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

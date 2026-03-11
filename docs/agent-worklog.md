@@ -4,6 +4,42 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-11 — M15: PR Comment Bot, Preview Badge, Next Milestone Fix
+
+### What was implemented
+
+- **PR comment bot** (`.github/workflows/inspectorepo-analysis.yml`) — the GitHub Action now posts a concise analysis summary comment on every pull request. The comment includes score, total issues, and severity breakdown (errors/warnings/info) in a Markdown table, plus a note that the full report is available as a workflow artifact. Uses `actions/github-script@v7` to parse the report and post/update the comment. An HTML marker comment (`<!-- inspectorepo-analysis -->`) is used to find and update an existing bot comment on subsequent runs, avoiding duplicate comments.
+- **Preview badge** (`apps/web/src/components/TopBar.tsx`, `apps/web/src/styles/global.css`) — added a clearly visible "Preview" status badge next to the app name in the top bar. The badge has a warm amber style (`#ff9800` text on `#ff980033` background) and a tooltip "Under active development". This signals to users that the product is still evolving.
+- **Dynamic Next Milestone generation** (`ai/scripts/generate-repomix-exports.ts`) — replaced the hardcoded "Next Milestone" section with a curated roadmap list. Each item has an `implemented` flag. The `generateNextMilestoneSection()` function filters to unimplemented items only (2–4), preventing already-shipped features (VS Code extension, GitHub Action, rule config, ignore system, early-return, PR comment bot, etc.) from appearing. `validateSummaryContent()` now also validates the Next Milestone section: checks for already-implemented items and enforces 2–4 count.
+- **README update** — added PR comment bot to the GitHub Action section, added Preview status mention to Key Features.
+- **Code walkthrough update** — documented the PR comment workflow step, the Preview badge component, and the dynamic Next Milestone generation.
+
+### Why
+
+- **PR comment bot** — downloading an artifact to see analysis results adds friction. A summary comment directly on the PR gives instant visibility into code quality without leaving the PR page.
+- **Preview badge** — users need to know the product is under active development. "Preview" is more polished than "Alpha" and appropriate for a product still evolving quickly.
+- **Next Milestone fix** — the generated summary was suggesting features that were already implemented (e.g. "VS Code extension"), which looks unprofessional and inaccurate. Dynamic generation from a curated roadmap ensures only future work is listed.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+npm run repopack   # Next Milestone must not list implemented features
+```
+
+### Design decisions
+
+- **`actions/github-script` over custom action** — lightweight, no external dependencies, runs inline JS with full GitHub API access. Perfect for a simple comment bot.
+- **Marker comment for deduplication** — an invisible HTML comment (`<!-- inspectorepo-analysis -->`) identifies the bot's previous comment. On re-runs, it updates the same comment instead of posting a new one. Keeps PR threads clean.
+- **Regex-based report parsing** — extracts score and issue counts from the markdown report using simple regex. Works with the existing report format without needing a separate JSON output.
+- **Curated roadmap array** — a flat array of `{ label, implemented }` objects is the simplest structure. Easy to maintain and extend.
+- **"Preview" over "Alpha"/"Beta"** — more professional for a portfolio project, appropriate for public demos, and correctly signals active development without implying instability.
+
+---
+
 ## 2026-03-10 — M13: VS Code Extension for InspectoRepo
 
 ### What was implemented
