@@ -38,62 +38,35 @@ jobs:
           path: inspectorepo-report.md
           retention-days: 30
 
+      - name: Extract report summary
+        id: summary
+        run: |
+          RESULT=$(npx tsx scripts/extract-report-summary.ts inspectorepo-report.md)
+          echo "json=$RESULT" >> "$GITHUB_OUTPUT"
+
       - name: Post PR comment with analysis summary
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const report = fs.readFileSync('inspectorepo-report.md', 'utf-8');
-
-            // Parse the markdown summary table produced by buildMarkdownReport()
-            // Table format:
-            // | Metric | Value |
-            // |---|---|
-            // | Score | **82/100** |
-            // | Total issues | 5 |
-            // | 🔴 Errors | 1 |
-            // | 🟡 Warnings | 2 |
-            // | 🔵 Info | 2 |
-            const tableRows = new Map();
-            for (const line of report.split('\n')) {
-              const m = line.match(/^\|\s*(.+?)\s*\|\s*(.+?)\s*\|$/);
-              if (m) {
-                const key = m[1].replace(/^[🔴🟡🔵]\s*/, '').trim().toLowerCase();
-                tableRows.set(key, m[2].trim());
-              }
-            }
-
-            const scoreRaw = tableRows.get('score');
-            const scoreMatch = scoreRaw && scoreRaw.match(/\*{0,2}(\d+)\s*\/\s*100\*{0,2}/);
-            const totalRaw = tableRows.get('total issues');
-            const errorsRaw = tableRows.get('errors');
-            const warningsRaw = tableRows.get('warnings');
-            const infoRaw = tableRows.get('info');
-
-            const parsed = scoreMatch && totalRaw && errorsRaw && warningsRaw && infoRaw;
+            const raw = '${{ steps.summary.outputs.json }}';
+            const parsed = raw && raw !== 'null' ? JSON.parse(raw) : null;
 
             const marker = '<!-- inspectorepo-analysis -->';
             let body;
 
             if (parsed) {
-              const score = scoreMatch[1];
-              const totalIssues = totalRaw;
-              const errors = errorsRaw;
-              const warnings = warningsRaw;
-              const infos = infoRaw;
-
               body = [
                 marker,
                 '## 🔍 InspectoRepo Analysis',
                 '',
                 '| Metric | Value |',
                 '|--------|-------|',
-                `| Score | **${score}/100** |`,
-                `| Total Issues | ${totalIssues} |`,
-                `| 🔴 Errors | ${errors} |`,
-                `| 🟡 Warnings | ${warnings} |`,
-                `| 🔵 Info | ${infos} |`,
+                `| Score | **${parsed.score}/100** |`,
+                `| Total Issues | ${parsed.totalIssues} |`,
+                `| 🔴 Errors | ${parsed.errors} |`,
+                `| 🟡 Warnings | ${parsed.warnings} |`,
+                `| 🔵 Info | ${parsed.info} |`,
                 '',
                 '> Full report available as a workflow artifact.',
               ].join('\n');

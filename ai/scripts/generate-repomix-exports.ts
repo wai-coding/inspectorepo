@@ -213,6 +213,21 @@ function isBannedBullet(bullet: string): boolean {
   return BANNED_BULLET_PATTERNS.some(p => p.test(bullet.trim()));
 }
 
+/** Check whether a bullet is structurally complete (no truncation or unmatched backticks). */
+function isTruncatedBullet(bullet: string): boolean {
+  const trimmed = bullet.trim();
+  // Unmatched backticks (odd count)
+  const backtickCount = (trimmed.match(/`/g) ?? []).length;
+  if (backtickCount % 2 !== 0) return true;
+  // Unmatched opening code block
+  if (trimmed.includes('```') && (trimmed.match(/```/g) ?? []).length % 2 !== 0) return true;
+  // Ends with backslash (escaped/truncated)
+  if (trimmed.endsWith('\\')) return true;
+  // Very short (likely truncated fragment)
+  if (trimmed.length < 15) return true;
+  return false;
+}
+
 /** Strip conventional-commit prefixes and clean up a raw string into a human-readable sentence. */
 function cleanBulletText(raw: string): string {
   let text = raw.trim();
@@ -222,6 +237,10 @@ function cleanBulletText(raw: string): string {
   text = text.replace(/^Merge pull request #\d+ from .*/i, '');
   // Remove leading "- " or "* "
   text = text.replace(/^[-*]\s*/, '');
+  // Strip inline backticks to prevent truncation artifacts
+  text = text.replace(/`[^`]*`/g, (m) => m.slice(1, -1));
+  // Remove any remaining stray backticks
+  text = text.replace(/`/g, '');
   // Capitalize first letter
   if (text.length > 0) {
     text = text.charAt(0).toUpperCase() + text.slice(1);
@@ -249,6 +268,7 @@ function validateBullets(bullets: string[]): string[] {
   for (const b of bullets) {
     if (isBannedBullet(b)) failures.push(`BANNED: "${b}"`);
     if (b.trim().length === 0) failures.push('EMPTY bullet');
+    if (isTruncatedBullet(b)) failures.push(`TRUNCATED: "${b}"`);
   }
   // Check duplicates
   const seen = new Set<string>();
@@ -303,7 +323,7 @@ function generateHumanSummary(pr: PRInfo, files: string[], _commits: string): st
   let bullets = candidates.slice(0, 5);
 
   // Remove any that still fail validation individually
-  bullets = bullets.filter(b => !isBannedBullet(b) && b.trim().length > 0);
+  bullets = bullets.filter(b => !isBannedBullet(b) && b.trim().length > 0 && !isTruncatedBullet(b));
 
   // Deduplicate (case-insensitive)
   const deduped: string[] = [];
@@ -394,7 +414,7 @@ function validateSummaryContent(content: string): void {
     process.exit(1);
   }
 
-  // Check each bullet against banned patterns
+  // Check each bullet against banned patterns and truncation
   for (const bullet of bulletLines) {
     if (bullet.length === 0) {
       console.error('\nERROR: Human Summary contains an empty bullet');
@@ -402,6 +422,10 @@ function validateSummaryContent(content: string): void {
     }
     if (isBannedBullet(bullet)) {
       console.error(`\nERROR: Human Summary bullet contains banned noise: "${bullet}"`);
+      process.exit(1);
+    }
+    if (isTruncatedBullet(bullet)) {
+      console.error(`\nERROR: Human Summary bullet appears truncated: "${bullet}"`);
       process.exit(1);
     }
   }
@@ -467,9 +491,11 @@ const ROADMAP: RoadmapItem[] = [
   { label: 'CLI package for headless analysis', implemented: true },
   { label: 'Auto-apply suggested fixes', implemented: true },
   { label: 'PR comment bot for analysis summaries', implemented: true },
-  { label: 'Custom rule authoring API for user-defined rules', implemented: false },
+  { label: 'Custom rule authoring API for user-defined rules', implemented: true },
+  { label: 'Rule presets for common project types', implemented: true },
+  { label: 'Web UI improvements with expandable issue details', implemented: true },
+  { label: 'Fix preview mode for safe dry-run inspection', implemented: true },
   { label: 'Stronger auto-fix engine with broader rule coverage', implemented: false },
-  { label: 'Rule presets for common project types', implemented: false },
   { label: 'Monorepo-aware analysis with per-package reports', implemented: false },
 ];
 
@@ -605,7 +631,6 @@ ${milestoneFiles.join('\n')}
 
 ## Known Limitations
 - Auto-fix only supports 3 rules (optional-chaining, boolean-simplification, unused-imports)
-- No custom rule authoring yet
 - Complexity-hotspot is advisory only — no auto-fix support
 - Browser folder picker requires Chrome/Edge (File System Access API)
 

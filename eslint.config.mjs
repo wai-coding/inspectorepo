@@ -53,6 +53,8 @@ export default [
     },
   },
   {
+    // vscode-extension excluded: uses the 'vscode' module which requires the VS Code
+    // extension host environment and @types/vscode — not resolvable by the workspace ESLint setup.
     ignores: ['**/dist/**', '**/node_modules/**', '**/*.js', '**/*.mjs', 'examples/fixture-repo/**', 'screenshots/*.ts', 'examples/*.ts', 'ai/scripts/*.ts', 'packages/vscode-extension/**'],
   },
 ];
