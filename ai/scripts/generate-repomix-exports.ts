@@ -7,7 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..', '..');
 const EXPORTS_DIR = join(ROOT, 'ai', 'exports');
 
-const EXPORT_PATTERN = /^(?:repo-pack-full|repo-pack-core|changes-summary)-v(\d+)\.md$/;
+const EXPORT_PATTERN = /^(?:repo-pack-full|repo-pack-core|repo-pack-latest|changes-summary)-v(\d+)\.md$/;
 
 function run(cmd: string): string {
   try {
@@ -267,6 +267,20 @@ function buildAreaBullets(files: string[]): string[] {
   return bullets;
 }
 
+/** Format files grouped by area for the Files Changed section. */
+function formatGroupedFiles(files: string[]): string {
+  const groups = categorizeFiles(files);
+  const lines: string[] = [];
+  for (const [area, areaFiles] of groups) {
+    lines.push(`# ${area}`);
+    for (const f of areaFiles.sort()) {
+      lines.push(f);
+    }
+    lines.push('');
+  }
+  return lines.join('\n').trim();
+}
+
 /** Validate that all bullets pass quality rules. Returns list of failing bullets. */
 function validateBullets(bullets: string[]): string[] {
   const failures: string[] = [];
@@ -500,10 +514,21 @@ const ROADMAP: RoadmapItem[] = [
   { label: 'Rule presets for common project types', implemented: true },
   { label: 'Web UI improvements with expandable issue details', implemented: true },
   { label: 'Fix preview mode for safe dry-run inspection', implemented: true },
-  { label: 'Stronger auto-fix engine with detailed skip reporting', implemented: false },
-  { label: 'Monorepo-aware analysis with per-package reports', implemented: false },
-  { label: 'HTML report export for standalone sharing', implemented: false },
-  { label: 'Enhanced PR comment summaries with package highlights', implemented: false },
+  { label: 'Stronger auto-fix engine with detailed skip reporting', implemented: true },
+  { label: 'Monorepo-aware analysis with per-package reports', implemented: true },
+  { label: 'HTML report export for standalone sharing', implemented: true },
+  { label: 'Enhanced PR comment summaries with package highlights', implemented: true },
+  { label: 'Summary-only CLI mode for fast CI checks', implemented: true },
+  { label: 'Lightweight repo-pack-latest export mode', implemented: true },
+  { label: 'Web app onboarding About section and empty state', implemented: true },
+  { label: 'Deploy web app as a hosted service', implemented: false },
+  { label: 'Rule dependency graph and cascade analysis', implemented: false },
+  { label: 'Performance profiling for large codebases', implemented: false },
+  { label: 'VS Code extension inline fix suggestions', implemented: false },
+];
+  { label: 'Rule dependency graph and cascade analysis', implemented: false },
+  { label: 'Performance profiling for large codebases', implemented: false },
+  { label: 'VS Code extension inline fix suggestions', implemented: false },
 ];
 
 function generateNextMilestoneSection(): string {
@@ -578,6 +603,18 @@ const coreOutput = join(EXPORTS_DIR, `repo-pack-core-v${nextVersion}.md`);
 console.log('Generating core repo pack...');
 runRepomix(coreOutput, [...baseIgnore, ...coreExtraIgnore]);
 
+// Generate latest/lightweight pack (core files + structure, no history/docs/screenshots)
+const latestExtraIgnore = [
+  'screenshots',
+  'docs',
+  '.github',
+  'ai/scripts',
+  'scripts',
+];
+const latestOutput = join(EXPORTS_DIR, `repo-pack-latest-v${nextVersion}.md`);
+console.log('Generating latest (lightweight) repo pack...');
+runRepomix(latestOutput, [...baseIgnore, ...latestExtraIgnore]);
+
 // Gather milestone-specific data
 const prInfo = getLatestPRInfo();
 const milestoneFiles = getMilestoneFilesChanged(prInfo);
@@ -633,11 +670,11 @@ ${recentCommits}
 ## Files Changed
 
 \`\`\`
-${milestoneFiles.join('\n')}
+${formatGroupedFiles(milestoneFiles)}
 \`\`\`
 
 ## Known Limitations
-- Auto-fix only supports 3 rules (optional-chaining, boolean-simplification, unused-imports)
+- Auto-fix supports 4 rules (optional-chaining, boolean-simplification, unused-imports, early-return) — more planned
 - Complexity-hotspot is advisory only — no auto-fix support
 - Browser folder picker requires Chrome/Edge (File System Access API)
 
@@ -665,8 +702,8 @@ const writtenContent = readFileSync(summaryPath, 'utf-8');
 validateSummaryContent(writtenContent);
 console.log('Summary validation passed.');
 
-// Verify all 3 files exist
-const generatedFiles = [fullOutput, coreOutput, summaryPath];
+// Verify all 4 files exist
+const generatedFiles = [fullOutput, coreOutput, latestOutput, summaryPath];
 const missing = generatedFiles.filter(f => !existsSync(f));
 
 if (missing.length > 0) {
@@ -701,10 +738,11 @@ if (staleFiles.length > 0) {
   process.exit(1);
 }
 
-// Verify only the expected 3 files remain for the new version
+// Verify only the expected 4 files remain for the new version
 const expectedFiles = [
   `repo-pack-full-v${nextVersion}.md`,
   `repo-pack-core-v${nextVersion}.md`,
+  `repo-pack-latest-v${nextVersion}.md`,
   `changes-summary-v${nextVersion}.md`,
 ];
 const actualExportFiles = remainingFiles.filter(f => EXPORT_PATTERN.test(f));
@@ -723,6 +761,7 @@ console.log('');
 console.log('Generated files:');
 console.log(`  ai/exports/repo-pack-full-v${nextVersion}.md`);
 console.log(`  ai/exports/repo-pack-core-v${nextVersion}.md`);
+console.log(`  ai/exports/repo-pack-latest-v${nextVersion}.md`);
 console.log(`  ai/exports/changes-summary-v${nextVersion}.md`);
 console.log('');
 console.log('Old versions deleted: YES');

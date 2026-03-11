@@ -28,7 +28,19 @@ export function MainPanel({ report, selectedIssue, onSelectIssue }: MainPanelPro
     return (
       <main className="main-panel">
         <div className="placeholder">
-          <p>Select a folder and click Analyze to start</p>
+          <div className="about-section">
+            <h2 className="about-title">About InspectoRepo</h2>
+            <p className="about-text">
+              InspectoRepo analyzes TypeScript and React codebases using AST-based rules to surface
+              code quality improvements — with proposed fixes, severity scoring, and exportable reports.
+            </p>
+            <p className="about-text">
+              Select a folder and click <strong>Analyze</strong> to get started.
+            </p>
+            <p className="about-hint">
+              This UI is currently in <strong>Preview</strong> — features are under active development.
+            </p>
+          </div>
         </div>
       </main>
     );
@@ -38,10 +50,11 @@ export function MainPanel({ report, selectedIssue, onSelectIssue }: MainPanelPro
     return (
       <main className="main-panel">
         <div className="empty-state">
-          <p className="empty-title">No issues found</p>
+          <p className="empty-title">Great! No issues detected.</p>
           <p className="empty-detail">
-            Score: {report.summary.score}/100 — Scanned {report.meta.analyzedFilesCount} file
-            {report.meta.analyzedFilesCount !== 1 ? 's' : ''}.
+            Your code passed all {report.meta.analyzedFilesCount} analyzed file
+            {report.meta.analyzedFilesCount !== 1 ? 's' : ''} with a perfect score
+            of {report.summary.score}/100. No improvements needed right now.
           </p>
         </div>
       </main>

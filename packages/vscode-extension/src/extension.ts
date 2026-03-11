@@ -13,11 +13,12 @@ export function activate(context: vscode.ExtensionContext) {
     const workspaceRoot = folders[0].uri.fsPath;
     const reportName = 'inspectorepo-vscode-report.md';
     const reportPath = resolve(workspaceRoot, reportName);
+    const reportUri = vscode.Uri.file(reportPath);
 
     // Resolve the CLI entry point relative to this extension's location
     const cliPath = resolve(__dirname, '..', '..', 'cli', 'dist', 'index.js');
 
-    vscode.window.withProgress(
+    await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
         title: 'InspectoRepo: Running analysis…',
@@ -29,13 +30,27 @@ export function activate(context: vscode.ExtensionContext) {
             process.execPath,
             [cliPath, 'analyze', workspaceRoot, '--format', 'md', '--out', reportPath],
             { cwd: workspaceRoot, timeout: 120_000 },
-            (error) => {
+            async (error) => {
               if (error) {
                 vscode.window.showErrorMessage(`InspectoRepo analysis failed: ${error.message}`);
               } else {
-                vscode.window.showInformationMessage(
-                  `InspectoRepo analysis complete. Report saved to ${reportName}`
+                // Auto-open the generated report
+                try {
+                  const doc = await vscode.workspace.openTextDocument(reportUri);
+                  await vscode.window.showTextDocument(doc, { preview: false });
+                } catch {
+                  // Report opened best-effort; notification still shown
+                }
+
+                // Show notification with action button
+                const action = await vscode.window.showInformationMessage(
+                  'InspectoRepo analysis completed',
+                  'Open Report',
                 );
+                if (action === 'Open Report') {
+                  const doc = await vscode.workspace.openTextDocument(reportUri);
+                  await vscode.window.showTextDocument(doc, { preview: false });
+                }
               }
               resolvePromise();
             }

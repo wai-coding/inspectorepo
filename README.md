@@ -324,7 +324,7 @@ Download the `inspectorepo-report` artifact from the Actions tab to see the full
 
 ## Roadmap
 
-### V1 (current)
+### V1 — Foundation
 
 - [x] Monorepo setup with npm workspaces
 - [x] Core analysis engine skeleton
@@ -344,16 +344,31 @@ Download the `inspectorepo-report` artifact from the Actions tab to see the full
 - [x] Rule configuration (`.inspectorepo.json` + CLI `--rules`)
 - [x] Ignore system (`.inspectorepoignore`)
 
-### V2 (planned)
+### V2 — Automation
 
-- [x] Auto-apply suggested fixes (`inspectorepo fix`)
 - [x] CLI package for headless analysis
+- [x] Auto-apply suggested fixes (`inspectorepo fix`)
 - [x] GitHub Action for automated PR analysis
-- [x] Custom rule authoring
-- [x] VS Code extension
-- [x] Rule presets
-- [x] Web UI improvements (severity colors, filtering, expandable details)
+- [x] PR comment bot for analysis summaries
+- [x] HTML report export
+
+### V3 — Platform (current)
+
+- [x] Custom rule authoring API
+- [x] Rule presets (`recommended`, `strict`, `cleanup`, `react`)
 - [x] Fix preview mode (`inspectorepo fix --preview`)
+- [x] Monorepo-aware grouping with per-package scores
+- [x] Web UI improvements (severity colors, filtering, expandable details)
+- [x] VS Code extension for in-editor analysis
+- [x] Summary-only CLI mode (`--summary-only`)
+- [x] Improved PR comment summaries with top rules and package highlights
+
+### V4 — Planned
+
+- [ ] Deploy web app as a hosted service
+- [ ] VS Code extension inline fix suggestions
+- [ ] Dependency graph and cascade analysis
+- [ ] Performance profiling for large codebases
 
 ## Custom Rule API
 

@@ -174,10 +174,10 @@ A task is NOT finished until:
 2. `dev` synced with `main`
 3. `npm run repopack` executed
 4. New version > previous highest version
-5. `ai/exports/repo-pack-full-vN.md`, `repo-pack-core-vN.md`, `changes-summary-vN.md` exist
+5. `ai/exports/repo-pack-full-vN.md`, `repo-pack-core-vN.md`, `repo-pack-latest-vN.md`, `changes-summary-vN.md` exist
 6. `changes-summary-vN.md` contains auto-generated human summary bullets (no placeholders), and Files Changed scoped to the latest merged milestone only
 7. Old export versions deleted — only the latest remains
 8. Previous version, new version, and exact filenames printed
-9. User instructed to upload the 3 files to ChatGPT
+9. User instructed to upload the 4 files to ChatGPT
 
 The task MUST NOT be declared finished unless all checks above succeed.

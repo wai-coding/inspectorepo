@@ -26,6 +26,7 @@ interface CliOptions {
   preset?: string;
   preview?: boolean;
   groupBy?: 'package';
+  summaryOnly?: boolean;
 }
 
 function printUsage(): void {
@@ -40,6 +41,7 @@ Options:
   --rules <rules>      Comma-separated rules to run (e.g. optional-chaining,unused-imports)
   --preset <name>      Rule preset: recommended, strict, cleanup, react
   --preview            Show proposed fixes without modifying files (fix only)
+  --summary-only       Only print score and severity counts (analyze only)
   --group-by <type>    Group issues by package (monorepo, analyze only)
   --format <fmt>       Output format: md, json, html (default: md) (analyze only)
   --out <file>         Write output to file instead of stdout (analyze only)
@@ -87,6 +89,9 @@ function parseArgs(args: string[]): CliOptions | null {
         break;
       case '--preview':
         opts.preview = true;
+        break;
+      case '--summary-only':
+        opts.summaryOnly = true;
         break;
       case '--group-by':
         {
@@ -335,6 +340,17 @@ export function run(args: string[]): void {
   if (opts.maxIssues !== undefined) {
     report.issues = report.issues.slice(0, opts.maxIssues);
     report.summary.totalIssues = report.issues.length;
+  }
+
+  // Summary-only mode: print score and severity counts then exit
+  if (opts.summaryOnly) {
+    const s = report.summary;
+    console.log(`Score: ${s.score}/100`);
+    console.log(`Total issues: ${s.totalIssues}`);
+    console.log(`Errors: ${s.bySeverity.error}`);
+    console.log(`Warnings: ${s.bySeverity.warn}`);
+    console.log(`Info: ${s.bySeverity.info}`);
+    return;
   }
 
   let output: string;

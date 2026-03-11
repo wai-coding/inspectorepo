@@ -229,6 +229,36 @@ body,
   color: var(--text-secondary);
 }
 
+/* About section */
+.about-section {
+  max-width: 480px;
+  text-align: left;
+}
+
+.about-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.about-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.about-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #ff980010;
+  border: 1px solid #ff980033;
+  border-radius: 4px;
+}
+
 /* Top bar summary */
 .top-bar-summary {
   display: flex;

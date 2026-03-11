@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { parseDirs, filterByDirs } from './fs-reader.js';
 import type { VirtualFile } from '@inspectorepo/shared';
 
@@ -54,5 +54,50 @@ describe('filterByDirs', () => {
       ['src'],
     );
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('summary-only mode', () => {
+  it('run() prints score and severity counts when --summary-only is used', async () => {
+    const { run } = await import('./cli.js');
+    const logs: string[] = [];
+    const spy = vi.spyOn(console, 'log').mockImplementation((...args) => {
+      logs.push(args.join(' '));
+    });
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const fixtureDir = new URL('../../../examples/fixture-repo', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+    run(['analyze', fixtureDir, '--summary-only']);
+
+    spy.mockRestore();
+    errSpy.mockRestore();
+
+    const output = logs.join('\n');
+    expect(output).toContain('Score:');
+    expect(output).toContain('Total issues:');
+    expect(output).toContain('Errors:');
+    expect(output).toContain('Warnings:');
+    expect(output).toContain('Info:');
+  });
+
+  it('--summary-only works with --group-by package', async () => {
+    const { run } = await import('./cli.js');
+    const logs: string[] = [];
+    const spy = vi.spyOn(console, 'log').mockImplementation((...args) => {
+      logs.push(args.join(' '));
+    });
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const fixtureDir = new URL('../../../examples/fixture-repo', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+    run(['analyze', fixtureDir, '--summary-only', '--group-by', 'package']);
+
+    spy.mockRestore();
+    errSpy.mockRestore();
+
+    const output = logs.join('\n');
+    expect(output).toContain('Score:');
+    expect(output).toContain('Total issues:');
+    // Should not contain full issue listings
+    expect(output).not.toContain('# InspectoRepo');
   });
 });
