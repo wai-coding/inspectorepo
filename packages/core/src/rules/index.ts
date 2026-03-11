@@ -8,6 +8,11 @@ import { noDebuggerRule } from './no-debugger.js';
 import { noEmptyCatchRule } from './no-empty-catch.js';
 import { noUselessReturnRule } from './no-useless-return.js';
 import { tsDiagnosticsRule } from './ts-diagnostics.js';
+import { noConsoleRule } from './no-console.js';
+import { noEmptyFunctionRule } from './no-empty-function.js';
+import { duplicateImportsRule } from './duplicate-imports.js';
+import { noUnreachableAfterReturnRule } from './no-unreachable-after-return.js';
+import { noThrowLiteralRule } from './no-throw-literal.js';
 
 export { unusedImportsRule } from './unused-imports.js';
 export { complexityHotspotRule } from './complexity-hotspot.js';
@@ -18,6 +23,11 @@ export { noDebuggerRule } from './no-debugger.js';
 export { noEmptyCatchRule } from './no-empty-catch.js';
 export { noUselessReturnRule } from './no-useless-return.js';
 export { tsDiagnosticsRule } from './ts-diagnostics.js';
+export { noConsoleRule } from './no-console.js';
+export { noEmptyFunctionRule } from './no-empty-function.js';
+export { duplicateImportsRule } from './duplicate-imports.js';
+export { noUnreachableAfterReturnRule } from './no-unreachable-after-return.js';
+export { noThrowLiteralRule } from './no-throw-literal.js';
 
 export const allRules: Rule[] = [
   unusedImportsRule,
@@ -29,4 +39,9 @@ export const allRules: Rule[] = [
   noEmptyCatchRule,
   noUselessReturnRule,
   tsDiagnosticsRule,
+  noConsoleRule,
+  noEmptyFunctionRule,
+  duplicateImportsRule,
+  noUnreachableAfterReturnRule,
+  noThrowLiteralRule,
 ];

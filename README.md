@@ -32,6 +32,11 @@ Manual code review is time-consuming and inconsistent. InspectoRepo provides det
 | `no-empty-catch` | warn | Flags empty catch blocks that silently hide errors — report only |
 | `no-useless-return` | info | Detects redundant `return;` at the end of functions — auto-fixable |
 | `ts-diagnostics` | error | Reports high-confidence TypeScript compiler diagnostics (unreachable code, duplicate identifiers, missing names, type mismatches) — report only |
+| `no-console` | warn | Detects `console.log`, `console.warn`, `console.error` and similar calls left in production code |
+| `no-empty-function` | info | Flags empty function bodies that may indicate incomplete implementation |
+| `duplicate-imports` | info | Detects multiple import declarations from the same module and suggests combining them |
+| `no-unreachable-after-return` | warn | Flags unreachable code after `return`, `throw`, `break`, or `continue` statements |
+| `no-throw-literal` | warn | Detects throwing literal values instead of Error objects, which lose stack trace information |
 
 ## Tech Stack
 
@@ -146,7 +151,7 @@ Apply safe code fixes interactively:
 inspectorepo fix ./my-project
 ```
 
-The fix command runs analysis, finds issues with safe auto-fix suggestions, shows a preview of each proposed change, and asks for confirmation before applying. Rules with auto-fix support: `optional-chaining`, `boolean-simplification`, `unused-imports`, `early-return`, `no-debugger`, and `no-useless-return`. Advisory rules like `complexity-hotspot`, `no-empty-catch`, and `ts-diagnostics` are never auto-applied.
+The fix command runs analysis, finds issues with safe auto-fix suggestions, shows a preview of each proposed change, and asks for confirmation before applying. Rules with auto-fix support: `optional-chaining`, `boolean-simplification`, `unused-imports`, `early-return`, `no-debugger`, and `no-useless-return`. Advisory rules like `complexity-hotspot`, `no-empty-catch`, `ts-diagnostics`, `no-console`, `no-empty-function`, `duplicate-imports`, `no-unreachable-after-return`, and `no-throw-literal` are never auto-applied.
 
 ### Fix Preview Mode
 
@@ -213,6 +218,11 @@ The CLI uses the same analysis engine as the web UI. Output is deterministic —
 | `no-empty-catch` | warn | ❌ | Flags empty catch blocks that silently hide errors |
 | `no-useless-return` | info | ✅ | Detects redundant `return;` at the end of functions |
 | `ts-diagnostics` | error | ❌ | Reports high-confidence TypeScript compiler diagnostics |
+| `no-console` | warn | ❌ | Detects console calls left in production code |
+| `no-empty-function` | info | ❌ | Flags empty function bodies that may indicate incomplete implementation |
+| `duplicate-imports` | info | ❌ | Detects multiple imports from the same module |
+| `no-unreachable-after-return` | warn | ❌ | Flags unreachable code after return/throw/break/continue |
+| `no-throw-literal` | warn | ❌ | Detects throwing literals instead of Error objects |
 
 ## Configuration
 
@@ -229,7 +239,12 @@ Create `.inspectorepo.json` in your project root to configure which rules run an
     "no-debugger": "warn",
     "no-empty-catch": "warn",
     "no-useless-return": "warn",
-    "ts-diagnostics": "off"
+    "ts-diagnostics": "off",
+    "no-console": "warn",
+    "no-empty-function": "warn",
+    "duplicate-imports": "warn",
+    "no-unreachable-after-return": "warn",
+    "no-throw-literal": "warn"
   }
 }
 ```
@@ -249,7 +264,7 @@ Available presets:
 | Preset | Description |
 |--------|-------------|
 | `recommended` | Balanced defaults — all rules at `warn` |
-| `strict` | Stricter — `unused-imports` and `complexity-hotspot` at `error` |
+| `strict` | Stricter — `unused-imports`, `complexity-hotspot`, `no-console`, `no-unreachable-after-return`, and `no-throw-literal` at `error` |
 | `cleanup` | Style-focused — disables `complexity-hotspot`, keeps simplification rules |
 | `react` | React/TS projects — `unused-imports` at `error`, all others `warn` |
 
@@ -376,6 +391,7 @@ Download the `inspectorepo-report` artifact from the Actions tab to see the full
 - [x] VS Code extension for in-editor analysis
 - [x] Summary-only CLI mode (`--summary-only`)
 - [x] Improved PR comment summaries with top rules and package highlights
+- [x] Conservative rules: `no-console`, `no-empty-function`, `duplicate-imports`, `no-unreachable-after-return`, `no-throw-literal`
 
 ### V4 — Planned
 

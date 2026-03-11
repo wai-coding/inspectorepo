@@ -1,5 +1,14 @@
 # Changelog
 
+## v6 — Conservative Rule Expansion
+
+- Added 5 new conservative analysis rules: `no-console`, `no-empty-function`, `duplicate-imports`, `no-unreachable-after-return`, `no-throw-literal`
+- All new rules registered in config defaults, all 4 presets, and rule registry
+- Updated strict preset to elevate `no-console`, `no-unreachable-after-return`, and `no-throw-literal` to error severity
+- Updated export workflow Known Limitations and ROADMAP for new rules
+- Updated README with new rules table, configuration examples, and roadmap
+- Added 20 new test cases covering all 5 new rules (194 total tests)
+
 ## v5 — Summary Polish and Config Coverage
 
 - Improved human summary generator with complete sentence enforcement and deploy-readiness detection

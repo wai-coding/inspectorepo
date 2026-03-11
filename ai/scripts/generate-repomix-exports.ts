@@ -566,6 +566,7 @@ const ROADMAP: RoadmapItem[] = [
   { label: 'Web app onboarding About section and empty state', implemented: true },
   { label: 'Richer complexity warnings with contributor breakdown', implemented: true },
   { label: 'Conservative analysis rules (no-debugger, no-empty-catch, no-useless-return, ts-diagnostics)', implemented: true },
+  { label: 'Additional conservative rules (no-console, no-empty-function, duplicate-imports, no-unreachable-after-return, no-throw-literal)', implemented: true },
   { label: 'Deploy web app as a hosted service', implemented: false },
   { label: 'Rule dependency graph and cascade analysis', implemented: false },
   { label: 'Performance profiling for large codebases', implemented: false },
@@ -716,6 +717,7 @@ ${formatGroupedFiles(milestoneFiles)}
 
 ## Known Limitations
 - Auto-fix supports 6 rules (optional-chaining, boolean-simplification, unused-imports, early-return, no-debugger, no-useless-return) — more planned
+- no-console, no-empty-function, duplicate-imports, no-unreachable-after-return, and no-throw-literal are advisory only — no auto-fix support
 - Complexity-hotspot, no-empty-catch, and ts-diagnostics are advisory only — no auto-fix support
 - Browser folder picker requires Chrome/Edge (File System Access API)
 
