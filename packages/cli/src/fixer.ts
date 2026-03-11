@@ -8,6 +8,8 @@ const SAFE_RULE_IDS = new Set([
   'boolean-simplification',
   'unused-imports',
   'early-return',
+  'no-debugger',
+  'no-useless-return',
 ]);
 
 export function isAutoFixable(issue: Issue): boolean {

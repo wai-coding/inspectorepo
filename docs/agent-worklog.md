@@ -4,6 +4,42 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-11 — Richer Analysis Rules and Export Polish
+
+### What was implemented
+
+- **Enriched complexity-hotspot warnings** — each complexity issue now includes function name, complexity score, contributor breakdown (if statements, loops, ternaries, logical chains, switch cases, nesting depth), and specific tailored suggestions instead of generic messages.
+- **New rule: `no-debugger`** — detects `debugger` statements left in code. Auto-fixable by removing the statement.
+- **New rule: `no-empty-catch`** — flags empty catch blocks that silently swallow errors. Report-only (no auto-fix).
+- **New rule: `no-useless-return`** — detects redundant `return;` at the end of function bodies. Auto-fixable.
+- **New rule: `ts-diagnostics`** — reports high-confidence TypeScript compiler diagnostics (unreachable code, duplicate identifiers, missing names, type mismatches). Report-only.
+- **Extended auto-fix support** — `no-debugger` and `no-useless-return` now supported in the fix engine (preview + apply modes).
+- **Export workflow polish** — human summary generation now bans milestone-title bullets and raw commit prefixes more strictly. Regenerate section lists all 4 export files. repo-pack-latest documented as the preferred lightweight pack.
+- **Web UI details panel** — expanded issue view now shows both suggestion summary and details for richer context (e.g. complexity contributors).
+- **Preset updates** — all four presets (`recommended`, `strict`, `cleanup`, `react`) updated to include the new rules with conservative defaults.
+
+### Why
+
+The previous complexity warnings were too generic — every function got the same message regardless of what was actually making it complex. The new rules (`no-debugger`, `no-empty-catch`, `no-useless-return`, `ts-diagnostics`) are all syntax-exact or diagnostics-backed, making them highly reliable with zero false positives for their defined scope.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+### Design decisions
+
+- **Complexity breakdown is tracked per-function** — a `ComplexityBreakdown` struct accumulates counts for each contributor type during the recursive walk. This makes the output deterministic and the rule predictable.
+- **New rules are conservative** — `no-debugger` and `no-empty-catch` are exact syntax matches with no ambiguity. `no-useless-return` only flags bare `return;` as the last statement. `ts-diagnostics` uses a curated subset of TS error codes.
+- **Auto-fix only for safe removals** — `no-debugger` (remove statement) and `no-useless-return` (remove redundant return) are trivially safe. `no-empty-catch` and `ts-diagnostics` are never auto-fixed.
+- **ts-diagnostics off by default** — in `recommended` and `cleanup` presets, because in-memory ts-morph projects may not resolve all external types. Enabled in `strict` preset.
+
+---
+
 ## 2026-03-11 — V3 Platform Milestone
 
 ### What was implemented

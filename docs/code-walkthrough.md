@@ -246,7 +246,25 @@ Skips side-effect imports (`import './polyfill'`).
 
 ### `src/rules/complexity-hotspot.ts`
 
-Counts control-flow complexity per function: if/else, switch cases, ternaries, logical operators, loops, try/catch, plus nesting depth bonus. Flags functions scoring ≥ 12.
+Counts control-flow complexity per function: if/else, switch cases, ternaries, logical operators, loops, try/catch, plus nesting depth bonus. Each function gets a `ComplexityBreakdown` struct tracking counts for each contributor type (ifStatements, loops, ternaries, logicalChains, switchCases, catchClauses, maxNestingDepth). Flags functions scoring ≥ 12.
+
+Messages are specific: `Function "renderDashboard" has high complexity (22) driven by nested conditionals and ternaries.` Details include contributor counts (e.g. "4 if statements, 3 ternaries, nesting depth 3"). Suggestions are tailored to what was actually found (e.g. "replace nested conditionals with early returns" when if-statements dominate).
+
+### `src/rules/no-debugger.ts`
+
+Detects `debugger` statements via `SyntaxKind.DebuggerStatement`. Auto-fixable by removing the statement line. Severity: warn.
+
+### `src/rules/no-empty-catch.ts`
+
+Detects catch blocks with no statements inside via `SyntaxKind.CatchClause` → `getBlock().getStatements().length === 0`. Report-only (no auto-fix). Severity: warn.
+
+### `src/rules/no-useless-return.ts`
+
+Detects bare `return;` as the final statement of a function body. Only flags when the return text is exactly `"return;"` — does not flag returns with values. Auto-fixable by removing the redundant line. Severity: info.
+
+### `src/rules/ts-diagnostics.ts`
+
+Reports selected high-confidence TypeScript diagnostics from the analyzed file using `sourceFile.getPreEmitDiagnostics()`. Only maps a conservative subset of diagnostic codes: TS7027 (unreachable code), TS2300 (duplicate identifier), TS2304 (cannot find name), TS2339 (property does not exist), TS2554 (argument count mismatch), TS2322 (type assignment mismatch). Off by default in recommended/cleanup presets; enabled in strict preset.
 
 ### `src/rules/optional-chaining.ts`
 
@@ -284,7 +302,7 @@ Rule preset system:
 - `isValidPreset(name)` — type guard checking if a string is a valid `PresetName`
 - `getPresetNames()` — returns the list of available preset names
 
-Presets: `recommended` (all warn), `strict` (unused-imports + complexity at error), `cleanup` (complexity off, style rules on), `react` (unused-imports at error for TS+React projects).
+Presets: `recommended` (all warn, ts-diagnostics off), `strict` (unused-imports + complexity + no-debugger + no-empty-catch at error, ts-diagnostics on), `cleanup` (complexity off, ts-diagnostics off, style/cleanup rules on), `react` (unused-imports at error for TS+React projects, ts-diagnostics off).
 
 ### `src/config.ts`
 
