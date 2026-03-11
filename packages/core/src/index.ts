@@ -9,6 +9,10 @@ export {
   optionalChainingRule,
   booleanSimplificationRule,
   earlyReturnRule,
+  noDebuggerRule,
+  noEmptyCatchRule,
+  noUselessReturnRule,
+  tsDiagnosticsRule,
 } from './rules/index.js';
 export {
   isExcludedDir,
