@@ -12,7 +12,7 @@ import {
 } from '@inspectorepo/core';
 import type { RuleConfig } from '@inspectorepo/core';
 import { readFilesFromDisk, parseDirs, filterByDirs } from './fs-reader.js';
-import { isAutoFixable, applyFix, formatFixPreview } from './fixer.js';
+import { isAutoFixable, applyFix, formatFixPreview, formatPreviewReport } from './fixer.js';
 
 interface CliOptions {
   path: string;
@@ -22,6 +22,7 @@ interface CliOptions {
   maxIssues?: number;
   rules?: string;
   preset?: string;
+  preview?: boolean;
 }
 
 function printUsage(): void {
@@ -35,6 +36,7 @@ Options:
   --dirs <dirs>        Comma-separated directories to analyze (e.g. src,lib)
   --rules <rules>      Comma-separated rules to run (e.g. optional-chaining,unused-imports)
   --preset <name>      Rule preset: recommended, strict, cleanup, react
+  --preview            Show proposed fixes without modifying files (fix only)
   --format <md|json>   Output format (default: md) (analyze only)
   --out <file>         Write output to file instead of stdout (analyze only)
   --max-issues <n>     Limit number of issues reported (analyze only)
@@ -78,6 +80,9 @@ function parseArgs(args: string[]): CliOptions | null {
         break;
       case '--preset':
         opts.preset = args[++i] || '';
+        break;
+      case '--preview':
+        opts.preview = true;
         break;
       case '--format':
         {
@@ -191,6 +196,12 @@ async function runFix(args: string[]): Promise<void> {
   const fixable = report.issues.filter(isAutoFixable);
   if (fixable.length === 0) {
     console.log('No auto-fixable issues found.');
+    return;
+  }
+
+  // Preview mode: show proposed fixes without modifying files
+  if (opts.preview) {
+    console.log(formatPreviewReport(fixable));
     return;
   }
 

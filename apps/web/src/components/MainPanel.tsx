@@ -22,6 +22,7 @@ const SEVERITY_COLORS: Record<Severity, string> = {
 export function MainPanel({ report, selectedIssue, onSelectIssue }: MainPanelProps) {
   const [filter, setFilter] = useState<Severity | 'all'>('all');
   const [search, setSearch] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (!report) {
     return (
@@ -53,6 +54,15 @@ export function MainPanel({ report, selectedIssue, onSelectIssue }: MainPanelPro
     if (search && !issue.message.toLowerCase().includes(searchLower) && !issue.filePath.toLowerCase().includes(searchLower) && !issue.ruleId.toLowerCase().includes(searchLower)) return false;
     return true;
   });
+
+  function handleRowClick(issue: Issue) {
+    if (expandedId === issue.id) {
+      setExpandedId(null);
+    } else {
+      setExpandedId(issue.id);
+    }
+    onSelectIssue(issue);
+  }
 
   return (
     <main className="main-panel">
@@ -92,25 +102,54 @@ export function MainPanel({ report, selectedIssue, onSelectIssue }: MainPanelPro
         />
       </div>
       <div className="issue-list">
-        {filtered.map((issue) => (
-          <button
-            key={issue.id}
-            className={`issue-row ${selectedIssue?.id === issue.id ? 'selected' : ''}`}
-            onClick={() => onSelectIssue(issue)}
-          >
-            <span
-              className="issue-severity"
-              style={{ color: SEVERITY_COLORS[issue.severity] }}
-            >
-              {SEVERITY_LABELS[issue.severity]}
-            </span>
-            <span className="issue-rule">{issue.ruleId}</span>
-            <span className="issue-file">
-              {issue.filePath}:{issue.range.start.line}
-            </span>
-            <span className="issue-msg">{issue.message}</span>
-          </button>
-        ))}
+        {filtered.map((issue) => {
+          const isExpanded = expandedId === issue.id;
+          return (
+            <div key={issue.id} className="issue-entry">
+              <button
+                className={`issue-row ${selectedIssue?.id === issue.id ? 'selected' : ''} severity-row-${issue.severity}`}
+                onClick={() => handleRowClick(issue)}
+              >
+                <span
+                  className="issue-severity"
+                  style={{ color: SEVERITY_COLORS[issue.severity] }}
+                >
+                  {SEVERITY_LABELS[issue.severity]}
+                </span>
+                <span className="issue-rule">{issue.ruleId}</span>
+                <span className="issue-file">
+                  {issue.filePath}
+                  <span className="issue-line">:{issue.range.start.line}</span>
+                </span>
+                <span className="issue-msg">{issue.message}</span>
+                <span className={`issue-chevron ${isExpanded ? 'expanded' : ''}`}>&#9654;</span>
+              </button>
+              {isExpanded && (
+                <div className="issue-expanded">
+                  <div className="issue-expanded-grid">
+                    <div className="issue-expanded-label">Severity</div>
+                    <div className={`issue-expanded-value severity-text-${issue.severity}`}>
+                      {issue.severity.toUpperCase()}
+                    </div>
+                    <div className="issue-expanded-label">Rule</div>
+                    <div className="issue-expanded-value">{issue.ruleId}</div>
+                    <div className="issue-expanded-label">Location</div>
+                    <div className="issue-expanded-value issue-expanded-location">
+                      {issue.filePath}:{issue.range.start.line}:{issue.range.start.column}
+                    </div>
+                  </div>
+                  <p className="issue-expanded-message">{issue.message}</p>
+                  {issue.suggestion.summary && (
+                    <div className="issue-expanded-suggestion">
+                      <span className="issue-expanded-suggestion-label">Suggestion:</span>{' '}
+                      {issue.suggestion.summary}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
         {filtered.length === 0 && (
           <div className="empty-state">
             <p className="empty-detail">No issues match the current filters.</p>

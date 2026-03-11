@@ -68,12 +68,13 @@ Key functions:
 - `getLatestPRInfo()` — queries `gh` for the latest merged PR's number, title, body, and merge commit SHA
 - `getMilestoneFilesChanged(pr)` — uses merge commit parent range, falls back to `gh pr diff`, then latest merge commit on main
 - `categorizeFiles(files)` — groups changed files by area (core, cli, web, docs, ai, workflow, etc.)
-- `cleanBulletText(raw)` — strips conventional-commit prefixes (`fix:`, `feat:`, etc.), merge request lines, and list markers from raw text
+- `cleanBulletText(raw)` — strips conventional-commit prefixes (`fix:`, `feat:`, etc.), merge request lines, list markers, and inline backtick-wrapped code from raw text. Also removes stray/unmatched backticks
 - `isBannedBullet(bullet)` — checks a bullet against the `BANNED_BULLET_PATTERNS` regex array (merge noise, commit prefixes, internal meta text)
+- `isTruncatedBullet(text)` — detects bullets that were truncated during extraction: unmatched backticks (odd count), unmatched code blocks, trailing backslash, or very short text (<15 chars)
 - `buildAreaBullets(files)` — generates polished, outcome-focused bullets from changed file areas using `AREA_BULLET_TEMPLATES` (e.g. "Improved the core analysis engine for better detection accuracy")
-- `validateBullets(bullets)` — enforces 3–5 count, no banned patterns, no duplicates, no empty bullets; returns list of failures
-- `generateHumanSummary(pr, files, commits)` — produces 3–5 polished, milestone-specific bullets: (1) cleans PR title/body, (2) fills from area templates, (3) validates and retries with pure area fallback if needed
-- `validateSummaryContent(content)` — validates the written summary file: placeholder phrases, bullet count 3–5, banned noise in each bullet, duplicates, empty bullets, non-empty Files Changed, and Next Milestone validity (no already-implemented items, 2–4 count)
+- `validateBullets(bullets)` — enforces 3–5 count, no banned patterns, no duplicates, no empty bullets, no truncated bullets; returns list of failures
+- `generateHumanSummary(pr, files, commits)` — produces 3–5 polished, milestone-specific bullets: (1) cleans PR title/body, (2) fills from area templates, (3) validates and retries with pure area fallback if needed. Filters out truncated bullets during extraction
+- `validateSummaryContent(content)` — validates the written summary file: placeholder phrases, bullet count 3–5, banned noise in each bullet, truncated bullets, duplicates, empty bullets, non-empty Files Changed, and Next Milestone validity (no already-implemented items, 2–4 count)
 - `generateNextMilestoneSection()` — dynamically generates the "Next Milestone" section from a curated `ROADMAP` array, filtering out items marked as `implemented`. Returns 2–4 future milestones as bullet lines
 
 #### Human Summary Quality Rules
@@ -101,6 +102,14 @@ No tracked state file is used. The version is derived entirely from existing exp
 ### `exports/`
 
 Git-ignored directory containing generated repomix exports (`repo-pack-full-vN.md`, `repo-pack-core-vN.md`, `changes-summary-vN.md`). These are uploaded to ChatGPT for review after each milestone merge.
+
+---
+
+## `scripts/`
+
+### `extract-report-summary.ts`
+
+CLI utility that reads a markdown report file and parses its summary table using `parseReportSummary()` from `@inspectorepo/core`. Outputs a JSON object `{ score, totalIssues, errors, warnings, info }` on success, or the string `"null"` if parsing fails. Used by the GitHub Actions workflow (`inspectorepo-analysis.yml`) to extract report metrics without duplicating regex logic inline. Accepts an optional file path argument (defaults to `inspectorepo-report.md`).
 
 ---
 
@@ -313,8 +322,9 @@ Bin entry point (`#!/usr/bin/env node`). Passes `process.argv.slice(2)` to `run(
 ### `src/cli.ts`
 
 Main CLI logic:
-- `parseArgs(args)` — parses `analyze <path>` plus `--dirs`, `--format`, `--out`, `--max-issues`, `--help` options. Returns `CliOptions` or `null` on error.
+- `parseArgs(args)` — parses `analyze <path>` and `fix <path>` plus `--dirs`, `--format`, `--out`, `--max-issues`, `--preview`, `--help` options. Returns `CliOptions` or `null` on error.
 - `run(args)` — resolves the target path, reads files via `readFilesFromDisk()`, filters by selected dirs, calls `analyzeCodebase()`, formats output as markdown or JSON, writes to file or stdout.
+- `runFix(args)` — runs analysis then filters to auto-fixable issues. In `--preview` mode, calls `formatPreviewReport()` and exits without modifying files. Otherwise, prompts interactively for each fix using `applyFix()`.
 
 ### `src/fs-reader.ts`
 
@@ -385,7 +395,9 @@ Center panel. Shows:
 - Placeholder before analysis
 - "No issues found" + score when clean
 - Severity filter buttons (All/Errors/Warnings/Info) + search input
-- Clickable issue rows (severity, rule, file:line, message)
+- Expandable issue rows with severity-colored left borders (red for error, amber for warn, blue for info)
+
+Each row displays severity label, rule id, file path with highlighted line number, message text, and a chevron indicator. Clicking a row toggles inline expansion showing severity (color-coded text), rule, location (`file:line:col`), full message, and suggestion. The chevron rotates 90° when expanded via CSS transition. Row click also sets the selected issue for the DetailsPanel.
 
 ### `src/components/DetailsPanel.tsx`
 
@@ -393,7 +405,7 @@ Right panel showing selected issue details. Uses a tabbed layout with **Suggesti
 
 ### `src/styles/global.css`
 
-Dark theme with CSS custom properties. Styles for: layout, top bar (summary badge), issue toolbar (filter buttons, search), issue list rows, detail panel tabs (`.detail-tabs`, `.detail-tab`, `.detail-tab.active` with accent underline), detail panel sections, proposed patch code block, `.detail-actions` for copy buttons.
+Dark theme with CSS custom properties. Styles for: layout, top bar (summary badge), issue toolbar (filter buttons, search), issue list rows with severity-colored left borders (`.severity-row-error/warn/info`), expandable issue details (`.issue-expanded` grid layout with label/value pairs), chevron rotation transition (`.issue-chevron`), severity text colors (`.severity-text-error/warn/info`), detail panel tabs (`.detail-tabs`, `.detail-tab`, `.detail-tab.active` with accent underline), detail panel sections, proposed patch code block, `.detail-actions` for copy buttons.
 
 ---
 
@@ -410,7 +422,8 @@ GitHub Action that runs InspectoRepo analysis on pull requests (and manual `work
 2. Install dependencies and build all packages
 3. Run `node packages/cli/dist/index.js analyze . --dirs packages,apps --format md --out inspectorepo-report.md`
 4. Upload the generated report as an artifact (`inspectorepo-report`)
-5. **PR comment bot** — on pull request events, uses `actions/github-script@v7` to parse the markdown summary table (row-by-row extraction matching the `| Metric | Value |` format from `buildMarkdownReport()`), then posts or updates a summary comment on the PR. If parsing fails, posts a safe fallback message instead of incorrect numbers. Uses an HTML marker comment (`<!-- inspectorepo-analysis -->`) to find and update a previous bot comment, avoiding duplicates.
+5. **Extract report summary** — runs `scripts/extract-report-summary.ts` (which calls `parseReportSummary()` from `@inspectorepo/core`) to parse the markdown into a JSON object `{ score, totalIssues, errors, warnings, info }`. This reuses the same tested parser rather than duplicating regex logic inline.
+6. **PR comment bot** — on pull request events, uses `actions/github-script@v7` to post or update a summary comment on the PR using the parsed JSON. If parsing returned `null`, posts a safe fallback message. Uses an HTML marker comment (`<!-- inspectorepo-analysis -->`) to find and update a previous bot comment, avoiding duplicates.
 
 The report artifact can be downloaded from the Actions tab for each PR. The summary comment provides instant visibility without downloading.
 
@@ -477,10 +490,13 @@ The fixer module provides safe auto-fix capabilities with occurrence-counted, li
 
 The fix engine ensures only one occurrence of the target text exists in the file, validates the intended line matches expectations, then performs a controlled `indexOf` replacement on the confirmed single match. This three-step approach (occurrence counting → line validation → indexOf replacement) prevents accidental edits when a pattern appears multiple times or the file has changed since analysis.
 
+- `formatPreviewReport(issues)` — generates a read-only preview report for all fixable issues. Shows `Proposed fixes:` header, then for each issue: file path, rule id, Before/After code blocks (indented), separated by `---`. Ends with `"{N} fixable issue(s) found. No files were modified."`. Used by the `--preview` CLI flag.
+
 ### `packages/cli/src/fixer.test.ts`
 
-14 tests covering `isAutoFixable`, `parseDiff`, and `applyFix`:
+16 tests covering `isAutoFixable`, `parseDiff`, `applyFix`, and `formatPreviewReport`:
 - Auto-fixable: optional-chaining, boolean-simplification, unused-imports (all true with diff)
 - Not auto-fixable: complexity-hotspot (always false), missing diff (false)
 - Parse: optional chaining diff, boolean diff, removal-only diff, partial import fix, empty/invalid diff
 - Apply safety: duplicate pattern skipped, single occurrence applied, unexpected context skipped, normal optional chaining fix
+- Preview: `formatPreviewReport` renders expected output with Before/After text; preview mode produces correct issue count and "No files were modified" message

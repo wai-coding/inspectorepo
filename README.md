@@ -11,7 +11,7 @@ Manual code review is time-consuming and inconsistent. InspectoRepo provides det
 - **Folder selection** — pick a local codebase using File System Access API (Chrome/Edge) with a fallback `<input webkitdirectory>` upload
 - **Directory tree** — browse top-level directories with checkboxes; defaults to `src/` if present
 - **TS/TSX analysis engine** — deterministic pipeline: scan → parse (ts-morph in-memory) → apply rules → score → report
-- **Issue list UI** — filterable by severity/search, with detail panel showing suggestions and proposed patches
+- **Issue list UI** — filterable by severity/search, with expandable issue rows showing full details, severity color-coded borders, and clickable file paths with line numbers
 - **Preview status** — the web UI displays a Preview badge indicating the product is under active development
 - **Scoring** — 0–100 score based on issue severity counts
 - **Markdown export** — download a full analysis report as `.md`
@@ -142,7 +142,36 @@ inspectorepo fix ./my-project
 
 The fix command runs analysis, finds issues with safe auto-fix suggestions, shows a preview of each proposed change, and asks for confirmation before applying. Only `optional-chaining`, `boolean-simplification`, and `unused-imports` rules support auto-fix. `complexity-hotspot` is never auto-applied.
 
+### Fix Preview Mode
+
+Preview all proposed fixes without modifying any files:
+
+```bash
+inspectorepo fix ./my-project --preview
+```
+
 Example output:
+
+```
+Proposed fixes:
+
+File: src/user.ts
+Rule: optional-chaining
+
+  Before:
+  if (user && user.name)
+
+  After:
+  if (user?.name)
+
+---
+
+1 fixable issue(s) found. No files were modified.
+```
+
+Preview mode is useful for dry-run checks in CI or for reviewing all changes before committing to apply them.
+
+Example interactive output:
 
 ```
 Rule: optional-chaining
@@ -323,6 +352,8 @@ Download the `inspectorepo-report` artifact from the Actions tab to see the full
 - [x] Custom rule authoring
 - [x] VS Code extension
 - [x] Rule presets
+- [x] Web UI improvements (severity colors, filtering, expandable details)
+- [x] Fix preview mode (`inspectorepo fix --preview`)
 
 ## Custom Rule API
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { parseDiff, isAutoFixable, applyFix } from './fixer.js';
+import { parseDiff, isAutoFixable, applyFix, formatPreviewReport } from './fixer.js';
 import type { Issue } from '@inspectorepo/shared';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -189,5 +189,59 @@ describe('applyFix', () => {
     const result = applyFix(tmpDir, issue);
     expect(result.applied).toBe(true);
     expect(readTestFile('src/chain.ts')).toBe('function get() {\n  return obj?.value;\n}\n');
+  });
+});
+
+describe('formatPreviewReport', () => {
+  it('renders expected preview output', () => {
+    const issues: Issue[] = [
+      {
+        id: 'test:42:optional-chaining',
+        ruleId: 'optional-chaining',
+        severity: 'info',
+        message: 'Use optional chaining',
+        filePath: 'src/user.ts',
+        range: { start: { line: 42, column: 1 }, end: { line: 42, column: 1 } },
+        suggestion: {
+          summary: 'Use optional chaining',
+          details: '',
+          proposedDiff: '- if (user && user.name)\n+ if (user?.name)',
+        },
+      },
+    ];
+
+    const output = formatPreviewReport(issues);
+    expect(output).toContain('Proposed fixes:');
+    expect(output).toContain('File: src/user.ts');
+    expect(output).toContain('Rule: optional-chaining');
+    expect(output).toContain('Before:');
+    expect(output).toContain('if (user && user.name)');
+    expect(output).toContain('After:');
+    expect(output).toContain('if (user?.name)');
+    expect(output).toContain('No files were modified');
+  });
+
+  it('preview mode does not modify files', () => {
+    const issues: Issue[] = [
+      {
+        id: 'test:1:optional-chaining',
+        ruleId: 'optional-chaining',
+        severity: 'info',
+        message: 'test',
+        filePath: 'src/test.ts',
+        range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } },
+        suggestion: {
+          summary: 'test',
+          details: '',
+          proposedDiff: '- user && user.name\n+ user?.name',
+        },
+      },
+    ];
+
+    // formatPreviewReport is read-only — it only generates text output
+    const output = formatPreviewReport(issues);
+    expect(output).toContain('1 fixable issue(s) found');
+    expect(output).toContain('No files were modified');
+    // No file operations occurred — this is purely a formatting function
   });
 });
