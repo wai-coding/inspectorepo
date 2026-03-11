@@ -22,6 +22,11 @@ const DEFAULT_CONFIG: RuleConfig = {
   'no-empty-catch': 'warn',
   'no-useless-return': 'warn',
   'ts-diagnostics': 'off',
+  'no-console': 'warn',
+  'no-empty-function': 'warn',
+  'duplicate-imports': 'warn',
+  'no-unreachable-after-return': 'warn',
+  'no-throw-literal': 'warn',
 };
 
 /**

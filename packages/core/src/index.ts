@@ -13,6 +13,11 @@ export {
   noEmptyCatchRule,
   noUselessReturnRule,
   tsDiagnosticsRule,
+  noConsoleRule,
+  noEmptyFunctionRule,
+  duplicateImportsRule,
+  noUnreachableAfterReturnRule,
+  noThrowLiteralRule,
 } from './rules/index.js';
 export {
   isExcludedDir,

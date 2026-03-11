@@ -13,6 +13,11 @@ const PRESETS: Record<PresetName, RuleConfig> = {
     'no-empty-catch': 'warn',
     'no-useless-return': 'warn',
     'ts-diagnostics': 'off',
+    'no-console': 'warn',
+    'no-empty-function': 'warn',
+    'duplicate-imports': 'warn',
+    'no-unreachable-after-return': 'warn',
+    'no-throw-literal': 'warn',
   },
   strict: {
     'unused-imports': 'error',
@@ -24,6 +29,11 @@ const PRESETS: Record<PresetName, RuleConfig> = {
     'no-empty-catch': 'error',
     'no-useless-return': 'warn',
     'ts-diagnostics': 'error',
+    'no-console': 'error',
+    'no-empty-function': 'warn',
+    'duplicate-imports': 'warn',
+    'no-unreachable-after-return': 'error',
+    'no-throw-literal': 'error',
   },
   cleanup: {
     'unused-imports': 'warn',
@@ -35,6 +45,11 @@ const PRESETS: Record<PresetName, RuleConfig> = {
     'no-empty-catch': 'warn',
     'no-useless-return': 'warn',
     'ts-diagnostics': 'off',
+    'no-console': 'warn',
+    'no-empty-function': 'warn',
+    'duplicate-imports': 'warn',
+    'no-unreachable-after-return': 'warn',
+    'no-throw-literal': 'warn',
   },
   react: {
     'unused-imports': 'error',
@@ -46,6 +61,11 @@ const PRESETS: Record<PresetName, RuleConfig> = {
     'no-empty-catch': 'warn',
     'no-useless-return': 'warn',
     'ts-diagnostics': 'off',
+    'no-console': 'warn',
+    'no-empty-function': 'warn',
+    'duplicate-imports': 'warn',
+    'no-unreachable-after-return': 'warn',
+    'no-throw-literal': 'warn',
   },
 };
 

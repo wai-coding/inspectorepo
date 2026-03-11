@@ -18,6 +18,11 @@ const ALL_RULE_IDS = [
   'no-empty-catch',
   'no-useless-return',
   'ts-diagnostics',
+  'no-console',
+  'no-empty-function',
+  'duplicate-imports',
+  'no-unreachable-after-return',
+  'no-throw-literal',
 ];
 
 describe('parseConfig', () => {
