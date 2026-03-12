@@ -189,6 +189,10 @@ The analysis engine. Parses files, runs rules, computes scores, generates report
 
 Public API surface: `analyzeCodebase`, `buildMarkdownReport`, `computeScore`, all rules, file-filter utilities, scanner.
 
+### `src/browser.ts`
+
+Browser-safe entry point with zero ts-morph dependency. Re-exports only lightweight utilities: file-filter (`isExcludedDir`, `buildDirectoryTree`, `filterExcludedPaths`, `pickDefaultDirs`, `filterBySelectedDirs`, `normalizeRelativePath`), types (`DirEntry`, `FileEntry`), scanner (`filterAnalyzableFiles`, `isAnalyzableFile`), scoring (`computeScore`), report (`buildMarkdownReport`, `buildHtmlReport`), report-parser (`parseReportSummary`), presets, and config types. The web app imports from `@inspectorepo/core/browser` for initial load to keep the bundle small. The heavy `analyzeCodebase` function (which depends on ts-morph) is lazy-loaded via `import('@inspectorepo/core')` only when the user clicks Analyze.
+
 ### `src/analyzer.ts`
 
 Main analysis pipeline entry point:
@@ -395,9 +399,9 @@ Both methods return `{ name, files: VirtualFile[] }` with actual file content po
 ### `src/useAppState.ts`
 
 Central state hook managing folder, files, dirs, report, and selected issue. Key functions:
-- `handleAnalyze` — calls `analyzeCodebase()` from core
+- `handleAnalyze` — lazy-loads `analyzeCodebase` from `@inspectorepo/core` via dynamic `import()` (keeping ts-morph out of the initial bundle), then runs analysis
 - `selectIssue` — sets the currently selected issue for the detail panel
-- `exportMarkdown` — calls `buildMarkdownReport()` and triggers browser download
+- `exportMarkdown` — calls `buildMarkdownReport()` (from the lightweight `@inspectorepo/core/browser` import) and triggers browser download
 
 ### `src/components/TopBar.tsx`
 

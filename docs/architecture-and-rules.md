@@ -7,6 +7,7 @@
 ```
 packages/core/src/
 ├── index.ts              # Public API: analyzeCodebase, buildMarkdownReport, re-exports
+├── browser.ts            # Browser-safe API: lightweight re-exports without ts-morph
 ├── config.ts             # Rule configuration loader (.inspectorepo.json)
 ├── ignore.ts             # Ignore file loader (.inspectorepoignore)
 ├── scanner.ts            # isAnalyzableFile, filterAnalyzableFiles
@@ -29,6 +30,10 @@ packages/core/src/
 **1. VirtualFile[] as main input — browser-friendly**
 
 The core analysis engine never touches the filesystem. The public API accepts `VirtualFile[]` (`{ path: string; content: string }`). This keeps core importable from a browser bundle (the web app) without polyfilling Node's `fs`. Any filesystem access (directory picker, file reading) lives in `apps/web` or a future CLI adapter.
+
+**1b. Browser entry point separates heavy dependencies**
+
+`browser.ts` re-exports only lightweight utilities (file-filter, scanner, scoring, report, config, presets) with zero ts-morph dependency. The web app imports from `@inspectorepo/core/browser` for initial load. The heavy analysis engine (ts-morph) is lazy-loaded via `import('@inspectorepo/core')` only when the user triggers analysis. The `package.json` exports field maps `"./browser"` to `dist/browser.js`.
 
 **2. Filesystem adapters live outside core**
 

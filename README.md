@@ -47,6 +47,8 @@ Manual code review is time-consuming and inconsistent. InspectoRepo provides det
 | Analysis | ts-morph (TypeScript AST) |
 | Testing  | Vitest                    |
 | Monorepo | npm workspaces            |
+| Node     | 20.x                      |
+| Deploy   | Vercel (Preview)          |
 
 ## Project Structure
 
@@ -98,6 +100,12 @@ npm test
 | `npm run repopack`   | Generate repomix exports     |
 
 > **Export packs:** `npm run repopack` generates four versioned files under `ai/exports/`. Use `repo-pack-latest-vN.md` for a quick lightweight review — it includes project structure and core source without docs, screenshots, or scripts.
+
+## Deployment
+
+The web UI is deployed on Vercel as a **Preview** build. It runs the same analysis engine as the CLI — ts-morph executes entirely in the browser via an in-memory file system.
+
+> **Browser note:** Folder selection requires the File System Access API (Chrome/Edge). Other browsers can use the Upload Folder fallback. The analysis engine (ts-morph) is lazy-loaded to keep the initial page load fast.
 
 ## Demo
 
