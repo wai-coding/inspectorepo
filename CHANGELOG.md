@@ -1,5 +1,13 @@
 # Changelog
 
+## v8 — Post-Deploy Polish and AI-Assisted Development
+
+- Rewrote README with live demo link, architecture overview, and AI-assisted development section
+- Improved milestone summary generator with concrete bullet templates and stronger vague-phrase filtering
+- Fixed next milestone suggestions to exclude already-shipped features like web app deployment
+- Optimized browser bundle by separating React into its own vendor chunk alongside the existing analysis-engine chunk
+- Updated documentation across architecture, worklog, and code walkthrough for deploy-readiness consistency
+
 ## v7 — Deploy Polish and Browser Separation
 
 - Improved browser bundle architecture with a separate browser-safe entry point and lazy-loaded analysis engine

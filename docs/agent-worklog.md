@@ -4,6 +4,37 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-12 — V8: Post-Deploy Polish and AI-Assisted Development
+
+### What was implemented
+
+- **README rewrite** — replaced the original feature-list README with a recruiter-friendly version including: live demo link (https://inspectorepo.vercel.app), architecture overview, browser-safe bundle strategy, AI-assisted development section, and streamlined rules/CLI/configuration reference.
+- **Milestone summary generator improvements** — replaced vague area bullet templates with concrete, specific wording (e.g. "Introduced a browser-safe entry point to prevent heavy analysis dependencies from entering the web bundle"). Added 8 new vague-phrase bans including "code quality improvements", "overall improvements", and "developer experience improvements".
+- **Next milestone generator fix** — marked "Deploy web app as a hosted service" as implemented in the ROADMAP array. Replaced it with realistic future milestones: additional safe rules, deeper analysis diagnostics, performance optimization, and optional server-side analysis.
+- **Bundle optimization** — added `react-vendor` manual chunk to Vite config, separating React/ReactDOM from the main bundle for better caching alongside the existing `analysis-engine` chunk.
+- **Documentation consistency** — updated CHANGELOG, architecture docs, code walkthrough, and agent worklog to reflect deploy-readiness, browser-safe architecture, and AI-assisted development workflow.
+
+### Why
+
+After the first successful public deploy to Vercel, the README and documentation still described InspectoRepo as a local-only tool. The milestone summary generator produced vague bullets that wouldn't impress recruiters. The next milestone section incorrectly suggested deploying the web app — which was already done.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+### Design decisions
+
+- **README structure follows recruiter scanning patterns** — Live Demo near the top, Key Features as a scannable list, Architecture as a clear diagram. Technical details (CLI, configuration) come later.
+- **AI-assisted development section uses professional tone** — describes the workflow factually without hype, acknowledging both AI strengths and the need for human oversight.
+- **Concrete bullet templates** — each area template now describes a specific architectural improvement rather than a generic "improved X for better Y" pattern.
+
+---
+
 ## 2026-03-11 — V7: Deploy Polish and Browser Separation
 
 ### What was implemented

@@ -15,14 +15,26 @@ packages/core/src/
 ├── analyzer.ts           # analyzeCodebase() — main pipeline entry point
 ├── scoring.ts            # computeScore(issues) → { score, bySeverity }
 ├── report.ts             # buildMarkdownReport(AnalysisReport) → string
+├── report-parser.ts      # parseReportSummary(markdown) → ReportSummary
+├── custom-rule.ts        # defineRule() — custom rule authoring API
+├── presets.ts            # Rule preset system (recommended, strict, cleanup, react)
 ├── rule.ts               # Rule interface definition
 └── rules/
-    ├── index.ts           # Registry: allRules array
+    ├── index.ts                    # Registry: allRules array (14 rules)
     ├── unused-imports.ts
     ├── complexity-hotspot.ts
     ├── optional-chaining.ts
     ├── boolean-simplification.ts
-    └── early-return.ts
+    ├── early-return.ts
+    ├── no-debugger.ts
+    ├── no-empty-catch.ts
+    ├── no-useless-return.ts
+    ├── ts-diagnostics.ts
+    ├── no-console.ts
+    ├── no-empty-function.ts
+    ├── duplicate-imports.ts
+    ├── no-unreachable-after-return.ts
+    └── no-throw-literal.ts
 ```
 
 ### Key decisions

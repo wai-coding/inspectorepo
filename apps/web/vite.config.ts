@@ -8,6 +8,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
           'analysis-engine': ['@inspectorepo/core', 'ts-morph'],
         },
       },
