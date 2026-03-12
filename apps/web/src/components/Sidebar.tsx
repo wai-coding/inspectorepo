@@ -1,4 +1,4 @@
-import type { DirEntry } from '@inspectorepo/core';
+import type { DirEntry } from '@inspectorepo/core/browser';
 
 interface SidebarProps {
   dirs: DirEntry[];

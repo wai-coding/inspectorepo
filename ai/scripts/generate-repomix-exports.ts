@@ -151,7 +151,7 @@ function categorizeFiles(files: string[]): Map<string, string[]> {
 const AREA_BULLET_TEMPLATES: Record<string, string> = {
   core: 'Expanded rule coverage with stronger detection accuracy and richer diagnostics.',
   cli: 'Enhanced the command-line interface for a smoother developer experience.',
-  shared: 'Refined shared type definitions to improve consistency across all packages.',
+  shared: 'Refined shared type definitions to improve cross-package type safety.',
   'vscode-extension': 'Improved the VS Code extension for faster in-editor feedback.',
   web: 'Polished the web interface for a more intuitive analysis workflow.',
   docs: 'Updated documentation to reflect the latest codebase improvements and conventions.',
@@ -159,8 +159,8 @@ const AREA_BULLET_TEMPLATES: Record<string, string> = {
   workflow: 'Improved the CI pipeline to catch more issues before code ships.',
   examples: 'Updated example fixtures to demonstrate current rule coverage and patterns.',
   screenshots: 'Refreshed screenshots and demo automation for accurate visual documentation.',
-  root: 'Updated root project configuration for better workspace consistency.',
-  other: 'Improved project tooling and overall developer workflow configuration quality.',
+  root: 'Aligned root project configuration with the current Node and TypeScript targets.',
+  other: 'Tightened build and lint settings to reduce drift across packages.',
 };
 
 // Banned patterns — bullets containing any of these are considered noisy/internal
@@ -283,6 +283,17 @@ function formatGroupedFiles(files: string[]): string {
   return lines.join('\n').trim();
 }
 
+// Vague phrases that are banned from Human Summary bullets
+const VAGUE_BANNED_PHRASES: RegExp[] = [
+  /overall developer workflow configuration quality/i,
+  /workspace consistency/i,
+  /project tooling(?! \w)/i,
+  /general improvements/i,
+  /various fixes/i,
+  /miscellaneous updates/i,
+  /minor tweaks/i,
+];
+
 /** Check whether a bullet meets quality standards for human-readable output. */
 function isQualityBullet(bullet: string): boolean {
   const trimmed = bullet.trim();
@@ -298,6 +309,8 @@ function isQualityBullet(bullet: string): boolean {
   if (/^[a-z]+(\([^)]*\))?:/i.test(trimmed)) return false;
   // Must not contain backticks
   if (trimmed.includes('`')) return false;
+  // Must not contain vague banned phrases
+  if (VAGUE_BANNED_PHRASES.some(p => p.test(trimmed))) return false;
   return true;
 }
 

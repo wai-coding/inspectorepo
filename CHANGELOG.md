@@ -1,5 +1,13 @@
 # Changelog
 
+## v7 — Deploy Polish and Browser Separation
+
+- Improved browser bundle architecture with a separate browser-safe entry point and lazy-loaded analysis engine
+- Pinned Node engine to 20.x for stable Vercel deployments
+- Strengthened rule-system alignment tests to prevent drift between rule registry, config defaults, and presets
+- Polished web app onboarding with clearer browser capability fallback and step-by-step instructions
+- Removed vague phrasing from export summary templates and added stricter bullet validation
+
 ## v6 — Conservative Rule Expansion
 
 - Added 5 new conservative analysis rules: `no-console`, `no-empty-function`, `duplicate-imports`, `no-unreachable-after-return`, `no-throw-literal`

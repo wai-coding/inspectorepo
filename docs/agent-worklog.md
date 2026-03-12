@@ -4,6 +4,41 @@ Development log for InspectoRepo. Each entry describes what was implemented, why
 
 ---
 
+## 2026-03-11 — V7: Deploy Polish and Browser Separation
+
+### What was implemented
+
+- **Browser-safe entry point** — new `packages/core/src/browser.ts` re-exports only lightweight utilities (file-filter, scanner, scoring, report, config, presets) with zero ts-morph dependency. Web app imports from `@inspectorepo/core/browser` for initial load; heavy analysis is lazy-loaded via dynamic `import('@inspectorepo/core')` only when the user clicks Analyze.
+- **Package exports field** — `packages/core/package.json` now declares `"exports": { ".": "./dist/index.js", "./browser": "./dist/browser.js" }` so bundlers can tree-shake correctly.
+- **Vite build target** — `apps/web/vite.config.ts` sets `build.target: 'es2022'` and uses `manualChunks` to isolate ts-morph into a separate `analysis-engine` chunk.
+- **Node engine pin** — root `package.json` changed `engines.node` from `>=20.0.0` to `20.x` to match CI and Vercel runtime.
+- **Rule-system alignment tests** — `config.test.ts` now derives `ALL_RULE_IDS` dynamically from `allRules` instead of a hardcoded list. Added 7 new tests: every rule in DEFAULT_CONFIG, no unknown rules in config, presets reference only known IDs, presets cover every rule, filterRulesByConfig consistency, no duplicate IDs, count match.
+- **Web app onboarding polish** — `MainPanel.tsx` improved with ordered step list, browser compatibility warning, sample project hint, and checkmark icon in empty state.
+- **Export summary hardening** — `generate-repomix-exports.ts` replaces vague area bullet templates and adds `VAGUE_BANNED_PHRASES` regex array to `isQualityBullet()`.
+- **README and CHANGELOG** — added Node 20.x / Vercel rows to tech stack, new Deployment section, and v7 changelog entry.
+
+### Why
+
+After the first successful Vercel deploy, the web app pulled the entire ts-morph library (~2 MB) into the initial bundle via barrel imports. Separating browser-safe utilities from the heavy analysis engine reduces initial load time significantly. The Node engine pin and rule alignment tests harden the project for CI and prevent future drift.
+
+### How to verify
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
+### Design decisions
+
+- **Separate entry point over conditional exports** — a dedicated `browser.ts` file is clearer than `"browser"` condition maps and works with all bundlers.
+- **Lazy `import()` over eager import** — the analysis engine (ts-morph) is only needed when the user clicks Analyze. Dynamic import keeps initial page load fast.
+- **`20.x` over `>=20`** — pins to Node 20 LTS to match Vercel default and CI matrix, avoiding surprises from Node 22+ changes.
+- **Derived rule IDs** — `allRules.map(r => r.id)` eliminates the need to update a hardcoded list when adding new rules.
+
+---
+
 ## 2026-03-11 — Richer Analysis Rules and Export Polish
 
 ### What was implemented
