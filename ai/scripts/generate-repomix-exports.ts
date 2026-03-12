@@ -149,18 +149,18 @@ function categorizeFiles(files: string[]): Map<string, string[]> {
 
 // Polished, outcome-focused bullet templates per area (≥8 words, verb-first, complete sentences)
 const AREA_BULLET_TEMPLATES: Record<string, string> = {
-  core: 'Expanded rule coverage with stronger detection accuracy and richer diagnostics.',
-  cli: 'Enhanced the command-line interface for a smoother developer experience.',
-  shared: 'Refined shared type definitions to improve cross-package type safety.',
-  'vscode-extension': 'Improved the VS Code extension for faster in-editor feedback.',
-  web: 'Polished the web interface for a more intuitive analysis workflow.',
-  docs: 'Updated documentation to reflect the latest codebase improvements and conventions.',
-  ai: 'Strengthened the export workflow so summaries are cleaner and more reliable.',
-  workflow: 'Improved the CI pipeline to catch more issues before code ships.',
-  examples: 'Updated example fixtures to demonstrate current rule coverage and patterns.',
-  screenshots: 'Refreshed screenshots and demo automation for accurate visual documentation.',
-  root: 'Aligned root project configuration with the current Node and TypeScript targets.',
-  other: 'Tightened build and lint settings to reduce drift across packages.',
+  core: 'Introduced a browser-safe entry point to prevent heavy analysis dependencies from entering the web bundle.',
+  cli: 'Strengthened the command-line fixer with detailed skip reporting and preview output.',
+  shared: 'Refined shared type definitions to eliminate redundant casts across packages.',
+  'vscode-extension': 'Improved the VS Code extension to auto-open reports after analysis completes.',
+  web: 'Improved the onboarding experience with clearer sample-project entry points and browser detection.',
+  docs: 'Clarified architecture documentation to reflect the browser-safe import separation.',
+  ai: 'Hardened the milestone summary generator with stricter bullet validation and vague-phrase rejection.',
+  workflow: 'Added automated InspectoRepo analysis as a GitHub Actions check on every pull request.',
+  examples: 'Expanded fixture files to trigger all fourteen implemented analysis rules.',
+  screenshots: 'Automated screenshot capture with Playwright for consistent visual documentation.',
+  root: 'Pinned the Node.js engine version to stabilize Vercel deployments.',
+  other: 'Strengthened rule-system validation tests to prevent configuration drift.',
 };
 
 // Banned patterns — bullets containing any of these are considered noisy/internal
@@ -285,13 +285,21 @@ function formatGroupedFiles(files: string[]): string {
 
 // Vague phrases that are banned from Human Summary bullets
 const VAGUE_BANNED_PHRASES: RegExp[] = [
-  /overall developer workflow configuration quality/i,
+  /overall developer workflow/i,
+  /configuration quality/i,
   /workspace consistency/i,
   /project tooling(?! \w)/i,
   /general improvements/i,
   /various fixes/i,
   /miscellaneous updates/i,
   /minor tweaks/i,
+  /code quality improvements/i,
+  /overall improvements/i,
+  /developer experience improvements/i,
+  /codebase improvements/i,
+  /several enhancements/i,
+  /multiple updates/i,
+  /routine maintenance/i,
 ];
 
 /** Check whether a bullet meets quality standards for human-readable output. */
@@ -325,7 +333,7 @@ function hasWebChanges(files: string[]): boolean {
   return files.some(f => f.startsWith('apps/web/'));
 }
 
-const DEPLOY_READINESS_BULLET = 'Improved deploy readiness in the web application with clearer onboarding and browser capability detection.'
+const DEPLOY_READINESS_BULLET = 'Polished the web application for public deployment with privacy-safe in-browser analysis and clearer onboarding.';
 
 /** Validate that all bullets pass quality rules. Returns list of failing bullets. */
 function validateBullets(bullets: string[]): string[] {
@@ -413,9 +421,9 @@ function generateHumanSummary(pr: PRInfo, files: string[], _commits: string): st
     bullets = buildAreaBullets(files);
     // Always ensure at least 3
     const fallbacks = [
-      'Strengthened the export workflow so summaries are cleaner and more reliable.',
-      'Updated documentation to reflect the latest codebase improvements and conventions.',
-      'Improved developer feedback with clearer diagnostics and auto-fix reporting.',
+      'Hardened the milestone summary generator with stricter bullet validation and vague-phrase rejection.',
+      'Clarified architecture documentation to reflect the browser-safe import separation.',
+      'Strengthened rule-system validation tests to prevent configuration drift.',
     ];
     for (const fb of fallbacks) {
       if (bullets.length >= 3) break;
@@ -580,9 +588,11 @@ const ROADMAP: RoadmapItem[] = [
   { label: 'Richer complexity warnings with contributor breakdown', implemented: true },
   { label: 'Conservative analysis rules (no-debugger, no-empty-catch, no-useless-return, ts-diagnostics)', implemented: true },
   { label: 'Additional conservative rules (no-console, no-empty-function, duplicate-imports, no-unreachable-after-return, no-throw-literal)', implemented: true },
-  { label: 'Deploy web app as a hosted service', implemented: false },
-  { label: 'Rule dependency graph and cascade analysis', implemented: false },
-  { label: 'Performance profiling for large codebases', implemented: false },
+  { label: 'Deploy web app as a hosted service', implemented: true },
+  { label: 'Additional safe rules for common anti-patterns like magic numbers and nested callbacks', implemented: false },
+  { label: 'Deeper analysis diagnostics with cross-file dependency tracking', implemented: false },
+  { label: 'Performance profiling and optimization for large monorepo codebases', implemented: false },
+  { label: 'Optional server-side analysis endpoint for CI integration without Node dependencies', implemented: false },
   { label: 'VS Code extension inline fix suggestions', implemented: false },
 ];
 
@@ -594,8 +604,8 @@ function generateNextMilestoneSection(): string {
   const items = unique.slice(0, 4);
   if (items.length < 2) {
     // Safety fallback — should never happen if ROADMAP is maintained
-    items.push('Explore additional static analysis rules');
-    items.push('Performance profiling for large codebases');
+    items.push('Additional safe rules for common anti-patterns');
+    items.push('Performance profiling for large monorepo codebases');
   }
 
   return items.map(i => `- ${i}`).join('\n');
@@ -685,9 +695,9 @@ if (bulletErrors.length > 0) {
   humanBullets = buildAreaBullets(milestoneFiles);
   // Ensure 3–5 range
   const fallbacks = [
-    'Strengthened the export workflow so summaries are cleaner and more reliable.',
-    'Updated documentation to reflect the latest codebase improvements and conventions.',
-    'Improved developer feedback with clearer diagnostics and auto-fix reporting.',
+    'Hardened the milestone summary generator with stricter bullet validation and vague-phrase rejection.',
+    'Clarified architecture documentation to reflect the browser-safe import separation.',
+    'Strengthened rule-system validation tests to prevent configuration drift.',
   ];
   for (const fb of fallbacks) {
     if (humanBullets.length >= 3) break;

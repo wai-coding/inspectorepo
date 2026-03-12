@@ -2,6 +2,8 @@
 
 A guided tour of the InspectoRepo codebase. Organized by package and file, with short explanations and snippets.
 
+The web app is deployed at https://inspectorepo.vercel.app and runs entirely in the browser. The analysis engine (ts-morph) is lazy-loaded to keep the initial page load fast. This project was built using AI-assisted development with GitHub Copilot agents inside VS Code.
+
 ---
 
 ## Root Configuration

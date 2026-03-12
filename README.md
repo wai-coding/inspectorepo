@@ -1,44 +1,50 @@
 # InspectoRepo
 
-A local web application that analyzes TypeScript + React codebases and produces structured code review suggestions with a VSCode-like interface.
+A TypeScript code analysis tool that runs entirely in the browser. Analyze any TypeScript or React codebase, get actionable improvement suggestions with proposed fixes, and export detailed reports — all without sending a single line of code to a server.
 
-## Why
+## Live Demo
 
-Manual code review is time-consuming and inconsistent. InspectoRepo provides deterministic, AST-based analysis of TS/TSX files — surfacing real improvement opportunities with proposed diffs, all running locally with zero dependencies on paid APIs.
+InspectoRepo is deployed and publicly accessible here:
 
-## Key Features (V1)
+**https://inspectorepo.vercel.app**
 
-- **Folder selection** — pick a local codebase using File System Access API (Chrome/Edge) with a fallback `<input webkitdirectory>` upload
-- **Directory tree** — browse top-level directories with checkboxes; defaults to `src/` if present
-- **TS/TSX analysis engine** — deterministic pipeline: scan → parse (ts-morph in-memory) → apply rules → score → report
-- **Issue list UI** — filterable by severity/search, with expandable issue rows showing full details, severity color-coded borders, and clickable file paths with line numbers
-- **Preview status** — the web UI displays a Preview badge indicating the product is under active development
-- **Scoring** — 0–100 score based on issue severity counts
-- **Markdown export** — download a full analysis report as `.md`
-- **Exclude rules** — automatically skips `node_modules`, `dist`, `build`, `.git`, hidden dirs, and other noise
-- **Monorepo architecture** — npm workspaces with `shared`, `core`, and `web` packages
-- **CI pipeline** — GitHub Actions running lint, typecheck, build, and test on every push/PR, plus automated InspectoRepo analysis on pull requests
+- The app runs entirely in the browser — no server-side processing
+- Analyze local projects by selecting a folder or uploading files
+- No code leaves the browser; all analysis happens client-side via an in-memory TypeScript compiler
 
-## Implemented Rules
+## Key Features
 
-| Rule | Severity | Description |
-|------|----------|-------------|
-| `unused-imports` | warn | Detects unused import specifiers (default, namespace, named) and suggests removal with a safe proposed patch |
-| `complexity-hotspot` | warn | Flags functions with high cyclomatic-like complexity (≥ 12) with specific contributor breakdown (nested conditionals, loops, ternaries, logical chains) and tailored suggestions |
-| `optional-chaining` | info | Detects monotonic guard chains like `a && a.b && a.b.c` and suggests optional chaining (`a?.b?.c`) |
-| `boolean-simplification` | info | Simplifies `x === true`, `x === false`, `!!x`, and `x ? true : false` patterns |
-| `early-return` | info | Detects unnecessary block-style early returns and suggests single-line guard clauses |
-| `no-debugger` | warn | Detects `debugger` statements left in code — auto-fixable |
-| `no-empty-catch` | warn | Flags empty catch blocks that silently hide errors — report only |
-| `no-useless-return` | info | Detects redundant `return;` at the end of functions — auto-fixable |
-| `ts-diagnostics` | error | Reports high-confidence TypeScript compiler diagnostics (unreachable code, duplicate identifiers, missing names, type mismatches) — report only |
-| `no-console` | warn | Detects `console.log`, `console.warn`, `console.error` and similar calls left in production code |
-| `no-empty-function` | info | Flags empty function bodies that may indicate incomplete implementation |
-| `duplicate-imports` | info | Detects multiple import declarations from the same module and suggests combining them |
-| `no-unreachable-after-return` | warn | Flags unreachable code after `return`, `throw`, `break`, or `continue` statements |
-| `no-throw-literal` | warn | Detects throwing literal values instead of Error objects, which lose stack trace information |
+- **14 built-in analysis rules** — from unused imports and complexity hotspots to optional chaining suggestions and boolean simplifications
+- **AST-based detection** — powered by ts-morph for accurate, deterministic analysis with zero false positives on supported patterns
+- **Auto-fix support** — 6 rules support safe auto-fix via the CLI with interactive confirmation or preview mode
+- **Rule presets** — `recommended`, `strict`, `cleanup`, `react` — with per-rule severity overrides via `.inspectorepo.json`
+- **Custom rule API** — extend the engine with `defineRule()` and pass custom rules directly into the analyzer
+- **Browser-safe architecture** — heavy dependencies (ts-morph) are lazy-loaded only when analysis starts, keeping the initial page load fast
+- **Monorepo-aware** — per-package scoring and issue grouping for multi-package codebases
+- **Multiple output formats** — Markdown, HTML, and JSON report export from both CLI and web UI
+- **CLI + Web + VS Code** — analyze from the terminal, browser, or directly inside the editor
+- **GitHub Action** — automated analysis on every pull request with score and severity summary as a PR comment
 
-## Tech Stack
+## Example Output
+
+See [examples/sample-report.md](./examples/sample-report.md) for a full analysis report. The report includes severity-tagged issues, proposed diffs in collapsible details, and a 0–100 quality score.
+
+## Architecture Overview
+
+```
+inspectorepo/
+├── apps/web/              # React frontend (Vite) — browser-based analysis UI
+├── packages/
+│   ├── core/              # Analysis engine (ts-morph, rules, scoring, report)
+│   │   ├── index.ts       # Full API (depends on ts-morph)
+│   │   └── browser.ts     # Browser-safe API (no ts-morph dependency)
+│   ├── shared/            # Shared types (Issue, AnalysisReport, VirtualFile)
+│   ├── cli/               # Headless CLI for terminal-based analysis
+│   └── vscode-extension/  # VS Code extension for in-editor analysis
+├── examples/              # Fixture files and sample reports
+├── ai/                    # AI agent instructions and repomix export tooling
+└── docs/                  # Architecture docs, worklog, code walkthrough
+```
 
 | Layer    | Technology                |
 | -------- | ------------------------- |
@@ -47,30 +53,31 @@ Manual code review is time-consuming and inconsistent. InspectoRepo provides det
 | Analysis | ts-morph (TypeScript AST) |
 | Testing  | Vitest                    |
 | Monorepo | npm workspaces            |
-| Node     | 20.x                      |
-| Deploy   | Vercel (Preview)          |
+| Node     | 20.x (LTS)               |
+| Deploy   | Vercel                    |
 
-## Project Structure
+**Browser bundle strategy:** The web app imports only from `@inspectorepo/core/browser` at load time — a lightweight entry point with zero ts-morph dependency. The full analysis engine is lazy-loaded via dynamic `import()` only when the user clicks Analyze, keeping the initial bundle small and the page load fast.
 
-```
-inspectorepo/
-├── apps/
-│   └── web/              # React frontend (Vite)
-├── packages/
-│   ├── cli/              # Headless CLI for terminal-based analysis
-│   ├── core/             # Analysis engine (ts-morph, rules, scoring, report)
-│   ├── shared/           # Shared types (Issue, AnalysisReport, VirtualFile)
-│   └── vscode-extension/ # VS Code extension for in-editor analysis
-├── examples/
-│   ├── fixture-repo/     # Sample TS files for testing all rules
-│   └── sample-report.md  # Generated analysis report
-├── screenshots/          # UI screenshots & Playwright automation
-├── ai/                   # AI agent instructions, project context & repomix exports
-├── docs/                 # Architecture, worklog, code walkthrough
-└── package.json          # Root workspace config
-```
+## Rules
 
-## Getting Started
+| Rule | Severity | Auto-fix | Description |
+|------|----------|----------|-------------|
+| `unused-imports` | warn | yes | Detects unused import specifiers and suggests removal |
+| `complexity-hotspot` | warn | no | Flags high-complexity functions with contributor breakdown |
+| `optional-chaining` | info | yes | Suggests `?.` for monotonic guard chains |
+| `boolean-simplification` | info | yes | Simplifies redundant boolean expressions |
+| `early-return` | info | yes | Detects unnecessary block-style early returns |
+| `no-debugger` | warn | yes | Detects leftover `debugger` statements |
+| `no-empty-catch` | warn | no | Flags empty catch blocks that hide errors |
+| `no-useless-return` | info | yes | Detects redundant `return;` at end of functions |
+| `ts-diagnostics` | error | no | Reports high-confidence TypeScript compiler diagnostics |
+| `no-console` | warn | no | Detects console calls left in production code |
+| `no-empty-function` | info | no | Flags empty function bodies |
+| `duplicate-imports` | info | no | Detects multiple imports from the same module |
+| `no-unreachable-after-return` | warn | no | Flags unreachable code after return/throw/break/continue |
+| `no-throw-literal` | warn | no | Detects throwing literals instead of Error objects |
+
+## Development Workflow
 
 ```bash
 # Install dependencies
@@ -79,14 +86,12 @@ npm install
 # Start dev server
 npm run dev
 
-# Run checks
+# Run all checks
 npm run lint
 npm run typecheck
 npm run build
 npm test
 ```
-
-## Scripts
 
 | Script                | Description                  |
 | --------------------- | ---------------------------- |
@@ -95,383 +100,67 @@ npm test
 | `npm run lint`        | Lint all TS/TSX files        |
 | `npm run typecheck`   | TypeScript type checking     |
 | `npm run format`      | Format with Prettier         |
-| `npm run format:check`| Check formatting             |
 | `npm test`            | Run Vitest tests             |
 | `npm run repopack`   | Generate repomix exports     |
 
-> **Export packs:** `npm run repopack` generates four versioned files under `ai/exports/`. Use `repo-pack-latest-vN.md` for a quick lightweight review — it includes project structure and core source without docs, screenshots, or scripts.
-
-## Deployment
-
-The web UI is deployed on Vercel as a **Preview** build. It runs the same analysis engine as the CLI — ts-morph executes entirely in the browser via an in-memory file system.
-
-> **Browser note:** Folder selection requires the File System Access API (Chrome/Edge). Other browsers can use the Upload Folder fallback. The analysis engine (ts-morph) is lazy-loaded to keep the initial page load fast.
-
-## Demo
-
-Try InspectoRepo locally in three steps:
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/wai-coding/inspectorepo.git
-   cd inspectorepo
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Run the development server and analyze a folder**
-   ```bash
-   npm run dev
-   ```
-   Open the URL shown in the terminal. Click **Select Folder** (Chrome/Edge) or **Upload Folder** (any browser) to load a TypeScript project. Use the sidebar checkboxes to pick directories, then click **Analyze**. View issues in the main panel, click any issue to see details and proposed fixes, and click **Export .md** to download a Markdown report.
-
-   > **Browser support:** The folder picker uses the File System Access API (Chrome/Edge). Other browsers can use the Upload Folder fallback.
-
 ## CLI
 
-Analyze any TypeScript project from the terminal:
-
 ```bash
-# Basic analysis (markdown report to stdout)
-inspectorepo analyze ./my-project
-
-# Analyze specific directories with markdown output
+# Analyze a project
 inspectorepo analyze ./my-project --dirs src --format md
 
-# JSON output
-inspectorepo analyze ./my-project --format json
-
-# Write report to file
-npx inspectorepo analyze ./my-project --out report.md
-
-# Limit issues and select specific directories
-npx inspectorepo analyze ./my-project --dirs src,lib --max-issues 10
-```
-
-### CLI Fix
-
-Apply safe code fixes interactively:
-
-```bash
+# Apply safe auto-fixes interactively
 inspectorepo fix ./my-project
-```
 
-The fix command runs analysis, finds issues with safe auto-fix suggestions, shows a preview of each proposed change, and asks for confirmation before applying. Rules with auto-fix support: `optional-chaining`, `boolean-simplification`, `unused-imports`, `early-return`, `no-debugger`, and `no-useless-return`. Advisory rules like `complexity-hotspot`, `no-empty-catch`, `ts-diagnostics`, `no-console`, `no-empty-function`, `duplicate-imports`, `no-unreachable-after-return`, and `no-throw-literal` are never auto-applied.
-
-### Fix Preview Mode
-
-Preview all proposed fixes without modifying any files:
-
-```bash
+# Preview fixes without modifying files
 inspectorepo fix ./my-project --preview
-```
 
-Example output:
-
-```
-Proposed fixes:
-
-File: src/user.ts
-Rule: optional-chaining
-
-  Before:
-  if (user && user.name)
-
-  After:
-  if (user?.name)
-
----
-
-1 fixable issue(s) found. No files were modified.
-```
-
-Preview mode is useful for dry-run checks in CI or for reviewing all changes before committing to apply them.
-
-Example interactive output:
-
-```
-Rule: optional-chaining
-
-File: src/user.ts
-Line: 42
-
-Before:
-user && user.profile && user.profile.name
-
-After:
-user?.profile?.name
-
-Suggested diff:
-  - user && user.profile && user.profile.name
-  + user?.profile?.name
-
-Apply fix? (y/N)
-```
-
-The CLI uses the same analysis engine as the web UI. Output is deterministic — same input always produces the same report.
-
-## Rules
-
-| Rule | Severity | Auto-fix | Description |
-|------|----------|----------|-------------|
-| `unused-imports` | warn | ✅ | Detects unused import specifiers and suggests removal |
-| `complexity-hotspot` | warn | ❌ | Flags high-complexity functions with specific contributor breakdown and tailored suggestions |
-| `optional-chaining` | info | ✅ | Suggests `?.` for monotonic guard chains |
-| `boolean-simplification` | info | ✅ | Simplifies redundant boolean expressions |
-| `early-return` | info | ✅ | Detects unnecessary block-style early returns |
-| `no-debugger` | warn | ✅ | Detects `debugger` statements left in code |
-| `no-empty-catch` | warn | ❌ | Flags empty catch blocks that silently hide errors |
-| `no-useless-return` | info | ✅ | Detects redundant `return;` at the end of functions |
-| `ts-diagnostics` | error | ❌ | Reports high-confidence TypeScript compiler diagnostics |
-| `no-console` | warn | ❌ | Detects console calls left in production code |
-| `no-empty-function` | info | ❌ | Flags empty function bodies that may indicate incomplete implementation |
-| `duplicate-imports` | info | ❌ | Detects multiple imports from the same module |
-| `no-unreachable-after-return` | warn | ❌ | Flags unreachable code after return/throw/break/continue |
-| `no-throw-literal` | warn | ❌ | Detects throwing literals instead of Error objects |
-
-## Configuration
-
-Create `.inspectorepo.json` in your project root to configure which rules run and their severity:
-
-```json
-{
-  "rules": {
-    "optional-chaining": "error",
-    "unused-imports": "warn",
-    "complexity-hotspot": "off",
-    "boolean-simplification": "warn",
-    "early-return": "warn",
-    "no-debugger": "warn",
-    "no-empty-catch": "warn",
-    "no-useless-return": "warn",
-    "ts-diagnostics": "off",
-    "no-console": "warn",
-    "no-empty-function": "warn",
-    "duplicate-imports": "warn",
-    "no-unreachable-after-return": "warn",
-    "no-throw-literal": "warn"
-  }
-}
-```
-
-### Rule Presets
-
-Use a preset for a curated default configuration:
-
-```json
-{
-  "preset": "recommended"
-}
-```
-
-Available presets:
-
-| Preset | Description |
-|--------|-------------|
-| `recommended` | Balanced defaults — all rules at `warn` |
-| `strict` | Stricter — `unused-imports`, `complexity-hotspot`, `no-console`, `no-unreachable-after-return`, and `no-throw-literal` at `error` |
-| `cleanup` | Style-focused — disables `complexity-hotspot`, keeps simplification rules |
-| `react` | React/TS projects — `unused-imports` at `error`, all others `warn` |
-
-Explicit rule config overrides preset values:
-
-```json
-{
-  "preset": "strict",
-  "rules": {
-    "complexity-hotspot": "off"
-  }
-}
-```
-
-CLI preset override:
-
-```bash
+# Use a rule preset
 inspectorepo analyze ./my-project --preset strict
 ```
 
-Severity levels:
+## Configuration
 
-| Level | Behavior |
-|-------|----------|
-| `error` | Run with high severity |
-| `warn` | Run with default severity |
-| `off` | Disabled |
+Create `.inspectorepo.json` in your project root:
 
-Override from CLI with the `--rules` flag:
-
-```bash
-inspectorepo analyze ./my-project --rules optional-chaining,unused-imports
+```json
+{
+  "preset": "recommended",
+  "rules": {
+    "complexity-hotspot": "off",
+    "unused-imports": "error"
+  }
+}
 ```
 
-When `--rules` is provided, only those rules run (config file is ignored).
+Presets: `recommended` (balanced defaults), `strict` (elevated severity), `cleanup` (style-focused), `react` (React/TS projects).
 
-## Ignore File
+## AI-Assisted Development
 
-Create `.inspectorepoignore` in your project root to exclude files and directories from analysis:
+This project was intentionally built using AI agents to explore the boundaries of AI-assisted software development.
 
-```
-dist
-build
-node_modules
-coverage
-tests
-```
+- Development was done using GitHub Copilot agents inside VS Code, with the AI handling implementation, testing, documentation, and deployment tasks
+- The goal was to experiment with AI-assisted development workflows — understanding where autonomous coding agents excel and where human oversight remains essential
+- The repository includes prompt engineering tooling (`ai/prompt-master.md`) and automated export scripts that document the agent's work and reasoning across milestones
+- Each milestone was planned, implemented, validated, and merged through a structured agent workflow with conventional commits and CI checks
 
-Supports simple `.inspectorepoignore` patterns (directory names and basic `*.ext` matches). Each line matches a path segment or filename wildcard. The ignore file is automatically respected by the CLI.
+The approach is pragmatic: AI agents handled the repetitive scaffolding, test generation, and documentation updates, while architectural decisions and quality standards were guided by human review.
 
-## Interface Preview
+## Deployment
 
-![InspectoRepo UI](./screenshots/ui-layout.png)
+InspectoRepo is deployed on Vercel at **https://inspectorepo.vercel.app**.
 
-> Dark VSCode-like interface with file tree sidebar, issues list in the main panel, and detail/diff view on the right.
+The web app is a standard Vite/React static build. It runs the same analysis engine as the CLI — ts-morph executes entirely in the browser via an in-memory file system. No code is uploaded or processed on any server.
 
-## Sample Output
+**Browser support:** Folder selection requires the File System Access API (Chrome/Edge). Other browsers can use the Upload Folder fallback or the built-in sample project.
 
-See [examples/sample-report.md](./examples/sample-report.md) for a full analysis report generated from the [fixture repo](./examples/fixture-repo/). This shows the exact Markdown output InspectoRepo produces, including severity emojis, issue tables, and collapsible proposed diffs.
+## Future Improvements
 
-## VS Code Extension
-
-InspectoRepo can run directly inside VS Code. The extension registers a command that invokes the CLI on the current workspace and generates a Markdown report.
-
-1. Open a workspace folder in VS Code
-2. Run the command **InspectoRepo: Run Analysis** from the Command Palette (`Ctrl+Shift+P`)
-3. A report (`inspectorepo-vscode-report.md`) is generated in the workspace root
-
-The extension uses the same analysis engine as the CLI and web UI.
-
-## GitHub Action
-
-InspectoRepo runs automatically on every pull request via the `.github/workflows/inspectorepo-analysis.yml` workflow. It can also be triggered manually via `workflow_dispatch`. Steps:
-
-1. Checks out the repository
-2. Sets up Node.js 20
-3. Installs dependencies and builds all packages
-4. Runs the analysis:
-   ```bash
-   node packages/cli/dist/index.js analyze . --dirs packages,apps --format md --out inspectorepo-report.md
-   ```
-5. Uploads `inspectorepo-report.md` as a build artifact (retained 30 days)
-6. Posts a concise analysis summary comment on the pull request (score, issue counts, severity breakdown) — updates the same comment on subsequent runs to avoid noise
-
-Download the `inspectorepo-report` artifact from the Actions tab to see the full analysis.
-
-## Roadmap
-
-### V1 — Foundation
-
-- [x] Monorepo setup with npm workspaces
-- [x] Core analysis engine skeleton
-- [x] VSCode-like UI layout
-- [x] File System Access API integration + fallback upload
-- [x] Directory tree with selection
-- [x] Real analysis pipeline (scan → parse → rules → score → report)
-- [x] Rule: `unused-imports` — detect and suggest removal of unused imports
-- [x] Rule: `complexity-hotspot` — flag high-complexity functions with refactor suggestions
-- [x] Rule: `optional-chaining` — suggest `?.` for guard chains
-- [x] Rule: `boolean-simplification` — simplify redundant boolean expressions
-- [x] Rule: `early-return` — detect unnecessary block-style early returns
-- [x] Issue list with severity filters + search
-- [x] Detail panel with proposed patches + copy
-- [x] Markdown report export
-- [x] Scoring (0–100)
-- [x] Rule configuration (`.inspectorepo.json` + CLI `--rules`)
-- [x] Ignore system (`.inspectorepoignore`)
-
-### V2 — Automation
-
-- [x] CLI package for headless analysis
-- [x] Auto-apply suggested fixes (`inspectorepo fix`)
-- [x] GitHub Action for automated PR analysis
-- [x] PR comment bot for analysis summaries
-- [x] HTML report export
-
-### V3 — Platform (current)
-
-- [x] Custom rule authoring API
-- [x] Rule presets (`recommended`, `strict`, `cleanup`, `react`)
-- [x] Fix preview mode (`inspectorepo fix --preview`)
-- [x] Monorepo-aware grouping with per-package scores
-- [x] Web UI improvements (severity colors, filtering, expandable details)
-- [x] VS Code extension for in-editor analysis
-- [x] Summary-only CLI mode (`--summary-only`)
-- [x] Improved PR comment summaries with top rules and package highlights
-- [x] Conservative rules: `no-console`, `no-empty-function`, `duplicate-imports`, `no-unreachable-after-return`, `no-throw-literal`
-
-### V4 — Planned
-
-- [ ] Deploy web app as a hosted service
-- [ ] VS Code extension inline fix suggestions
-- [ ] Dependency graph and cascade analysis
-- [ ] Performance profiling for large codebases
-
-## Deployment Readiness
-
-The InspectoRepo web UI is currently in **Preview**. It is stable enough for local experimentation and demo purposes but is not yet deployed as a hosted service.
-
-- **Browser support:** The folder picker requires the File System Access API (Chrome or Edge). Other browsers can use the Upload Folder fallback or the "Try with sample project" button.
-- **Onboarding:** The app shows a clear About section explaining how to run an analysis, with browser capability detection and a sample project for instant exploration.
-- **Empty state:** When no issues are found, the UI displays a friendly confirmation with the analysis score.
-- **Preview badge:** A visible "Preview" badge in the top bar signals the product is under active development.
-
-For production deployment, the web app is a standard Vite/React build (`npm run build`) and can be served from any static hosting provider.
-
-## Custom Rule API
-
-Extend InspectoRepo with your own rules using `defineRule()`:
-
-```ts
-import { analyzeCodebase, defineRule } from '@inspectorepo/core';
-
-const noConsoleRule = defineRule({
-  id: 'no-console',
-  title: 'No Console',
-  severity: 'warn',
-  run(ctx) {
-    const issues = [];
-    ctx.sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression).forEach((call) => {
-      if (/^console\.\w+$/.test(call.getExpression().getText())) {
-        issues.push({
-          id: `${ctx.filePath}:${call.getStartLineNumber()}:no-console`,
-          ruleId: 'no-console',
-          severity: 'warn',
-          message: `Unexpected ${call.getExpression().getText()} statement`,
-          filePath: ctx.filePath,
-          range: { start: { line: call.getStartLineNumber(), column: 1 }, end: { line: call.getStartLineNumber(), column: 1 } },
-          suggestion: { summary: 'Remove console statement', details: '' },
-        });
-      }
-    });
-    return issues;
-  },
-});
-
-const report = analyzeCodebase({
-  files,
-  selectedDirectories: ['src'],
-  options: { customRules: [noConsoleRule] },
-});
-```
-
-Custom rules run alongside built-in rules. Pass them via `options.customRules` — no plugin loading or npm packages required. See [examples/custom-rule-no-console.ts](./examples/custom-rule-no-console.ts) for a complete example.
-
-## Screenshots
-
-Screenshot and demo video are generated automatically with Playwright:
-
-```bash
-# Start dev server first
-npm run dev
-
-# Capture screenshot
-npx tsx screenshots/capture.ts
-
-# Record demo video
-npx tsx screenshots/record-demo.ts
-```
+- Additional safe rules for common anti-patterns (magic numbers, nested callbacks)
+- Deeper analysis diagnostics with cross-file dependency tracking
+- Performance optimization for large monorepo codebases
+- Optional server-side analysis endpoint for CI integration
+- VS Code extension inline fix suggestions
 
 ## License
 
