@@ -18,7 +18,7 @@
     "repopack": "tsx ai/scripts/generate-repomix-exports.ts"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": "20.x"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
