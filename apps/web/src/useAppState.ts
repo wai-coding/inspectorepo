@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { AnalysisReport, Issue, VirtualFile } from '@inspectorepo/shared';
-import { buildDirectoryTree, pickDefaultDirs, analyzeCodebase, buildMarkdownReport } from '@inspectorepo/core';
-import type { DirEntry } from '@inspectorepo/core';
+import { buildDirectoryTree, pickDefaultDirs, buildMarkdownReport } from '@inspectorepo/core/browser';
+import type { DirEntry } from '@inspectorepo/core/browser';
 import { selectFolderViaAPI, readUploadedFiles, processFiles } from './folder-reader';
 
 // Small inline sample for "Try with sample project"
@@ -137,13 +137,15 @@ export function useAppState() {
     });
   }, []);
 
-  const handleAnalyze = useCallback(() => {
+  const handleAnalyze = useCallback(async () => {
+    setState((prev) => ({ ...prev, loading: true }));
+    const { analyzeCodebase } = await import('@inspectorepo/core');
     setState((prev) => {
       const report = analyzeCodebase({
         files: prev.allFiles,
         selectedDirectories: prev.selectedDirs,
       });
-      return { ...prev, report, selectedIssue: null };
+      return { ...prev, report, selectedIssue: null, loading: false };
     });
   }, []);
 

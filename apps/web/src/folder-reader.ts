@@ -1,5 +1,5 @@
-import { filterExcludedPaths, isExcludedDir } from '@inspectorepo/core';
-import { isAnalyzableFile } from '@inspectorepo/core';
+import { filterExcludedPaths, isExcludedDir } from '@inspectorepo/core/browser';
+import { isAnalyzableFile } from '@inspectorepo/core/browser';
 import type { VirtualFile } from '@inspectorepo/shared';
 
 // File System Access API (Chrome/Edge)

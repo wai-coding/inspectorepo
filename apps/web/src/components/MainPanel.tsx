@@ -38,22 +38,26 @@ export function MainPanel({ report, selectedIssue, onSelectIssue, onLoadSample }
               code quality improvements — with proposed fixes, severity scoring, and exportable reports.
             </p>
             <p className="about-text">
-              <strong>How to run an analysis:</strong> Click <strong>Select Folder</strong> (Chrome/Edge)
-              or <strong>Upload Folder</strong> (any browser) to load a project. Pick directories in the
-              sidebar, then click <strong>Analyze</strong>.
+              <strong>How to run an analysis:</strong>
             </p>
+            <ol className="about-steps">
+              <li>Click <strong>Select Folder</strong> (Chrome/Edge) or <strong>Upload Folder</strong> (any browser) to load a project.</li>
+              <li>Pick directories in the sidebar.</li>
+              <li>Click <strong>Analyze</strong> to run the analysis.</li>
+            </ol>
             {!hasFolderPicker && (
-              <p className="about-hint">
-                This browser does not support file system analysis features.
-                Use Chrome or Edge for the best experience, or use the <strong>Upload Folder</strong> fallback.
+              <p className="about-hint about-hint-warn">
+                Your browser does not support the File System Access API.
+                Use <strong>Chrome</strong> or <strong>Edge</strong> for folder selection, or use <strong>Upload Folder</strong> to load files.
               </p>
             )}
             <p className="about-hint">
-              This app is currently in <strong>Preview</strong> — features are under active development.
+              This app is in <strong>Preview</strong> — features are under active development.
             </p>
-            <button className="btn btn-accent" style={{ marginTop: 12 }} onClick={onLoadSample}>
+            <button className="btn btn-accent sample-cta" onClick={onLoadSample}>
               Try with sample project
             </button>
+            <p className="about-sample-hint">Load a small demo project to see InspectoRepo in action.</p>
           </div>
         </div>
       </main>
@@ -64,6 +68,7 @@ export function MainPanel({ report, selectedIssue, onSelectIssue, onLoadSample }
     return (
       <main className="main-panel">
         <div className="empty-state">
+          <span className="empty-icon">&#10003;</span>
           <p className="empty-title">Great! No issues detected.</p>
           <p className="empty-detail">
             Your code passed all {report.meta.analyzedFilesCount} analyzed file
