@@ -8,22 +8,8 @@ import {
 import { allRules } from './rules/index.js';
 import { resolvePreset, getPresetNames } from './presets.js';
 
-const ALL_RULE_IDS = [
-  'unused-imports',
-  'complexity-hotspot',
-  'optional-chaining',
-  'boolean-simplification',
-  'early-return',
-  'no-debugger',
-  'no-empty-catch',
-  'no-useless-return',
-  'ts-diagnostics',
-  'no-console',
-  'no-empty-function',
-  'duplicate-imports',
-  'no-unreachable-after-return',
-  'no-throw-literal',
-];
+// Canonical rule ID list — add new rule IDs here when adding rules
+const ALL_RULE_IDS = allRules.map((r) => r.id).sort();
 
 describe('parseConfig', () => {
   it('parses a valid config', () => {
@@ -166,5 +152,65 @@ describe('cliRulesToConfig', () => {
       expect(['warn', 'off']).toContain(config[id]);
     }
     expect(config['no-debugger']).toBe('warn');
+  });
+});
+
+describe('rule-system alignment', () => {
+  it('every rule in allRules is present in DEFAULT_CONFIG', () => {
+    const defaults = mergeConfig(null);
+    for (const rule of allRules) {
+      expect(defaults, `rule "${rule.id}" missing from DEFAULT_CONFIG`).toHaveProperty(rule.id);
+    }
+  });
+
+  it('DEFAULT_CONFIG has no entries for unknown rules', () => {
+    const defaults = mergeConfig(null);
+    const ruleIdSet = new Set(allRules.map((r) => r.id));
+    for (const key of Object.keys(defaults)) {
+      expect(ruleIdSet.has(key), `DEFAULT_CONFIG contains unknown rule "${key}"`).toBe(true);
+    }
+  });
+
+  it('every preset references only known rule IDs', () => {
+    const ruleIdSet = new Set(allRules.map((r) => r.id));
+    for (const presetName of getPresetNames()) {
+      const config = resolvePreset(presetName)!;
+      for (const key of Object.keys(config)) {
+        expect(ruleIdSet.has(key), `preset "${presetName}" references unknown rule "${key}"`).toBe(true);
+      }
+    }
+  });
+
+  it('every preset covers every rule', () => {
+    for (const presetName of getPresetNames()) {
+      const config = resolvePreset(presetName)!;
+      for (const id of ALL_RULE_IDS) {
+        expect(config, `preset "${presetName}" missing rule "${id}"`).toHaveProperty(id);
+      }
+    }
+  });
+
+  it('filterRulesByConfig returns consistent results with DEFAULT_CONFIG', () => {
+    const defaults = mergeConfig(null);
+    const filtered = filterRulesByConfig(allRules, defaults);
+    const filteredIds = new Set(filtered.map((r) => r.id));
+
+    for (const [id, setting] of Object.entries(defaults)) {
+      if (setting === 'off') {
+        expect(filteredIds.has(id), `rule "${id}" is off but still active`).toBe(false);
+      } else {
+        expect(filteredIds.has(id), `rule "${id}" is ${setting} but not active`).toBe(true);
+      }
+    }
+  });
+
+  it('allRules has no duplicate IDs', () => {
+    const ids = allRules.map((r) => r.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('allRules count matches DEFAULT_CONFIG key count', () => {
+    const defaults = mergeConfig(null);
+    expect(Object.keys(defaults).length).toBe(allRules.length);
   });
 });
